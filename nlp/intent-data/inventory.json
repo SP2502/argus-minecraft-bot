@@ -1,0 +1,93 @@
+[
+  {
+    "name": "show_inventory",
+    "phrases": ["inventory", "show inventory", "inv", "check inventory", "what do you have", "what are you carrying"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "inventory",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "sort_inventory",
+    "phrases": ["sort inventory", "sort", "organize inventory", "compact inventory", "tidy inventory"],
+    "requiredPermission": "trusted",
+    "priorityKey": "INVENTORY",
+    "skillName": "inventory",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "store_all",
+    "phrases": ["store all", "deposit all", "store everything", "deposit everything", "dump inventory", "stash all"],
+    "requiredPermission": "trusted",
+    "priorityKey": "INVENTORY",
+    "skillName": "inventory",
+    "requiredEntities": [],
+    "optionalEntities": ["category", "location"],
+    "defaultParams": { "category": "all" },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "store_item",
+    "phrases": ["store {quantity?} {item}", "deposit {quantity?} {item}", "stash {quantity?} {item}"],
+    "requiredPermission": "trusted",
+    "priorityKey": "INVENTORY",
+    "skillName": "inventory",
+    "requiredEntities": ["item"],
+    "optionalEntities": ["quantity", "location"],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "retrieve_item",
+    "phrases": ["retrieve {quantity?} {item}", "withdraw {quantity?} {item}", "take {quantity?} {item}", "get {quantity?} {item} from chest"],
+    "requiredPermission": "trusted",
+    "priorityKey": "INVENTORY",
+    "skillName": "inventory",
+    "requiredEntities": ["item"],
+    "optionalEntities": ["quantity", "location"],
+    "defaultParams": { "quantity": 1 },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "drop_all",
+    "phrases": ["drop all {item?}", "drop all items", "drop everything", "throw away everything", "drop inventory"],
+    "requiredPermission": "admin",
+    "priorityKey": "INVENTORY",
+    "skillName": "inventory",
+    "requiredEntities": [],
+    "optionalEntities": ["item"],
+    "defaultParams": {},
+    "destructive": true,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "drop_item",
+    "phrases": ["drop {quantity?} {item}", "throw out {quantity?} {item}", "discard {quantity?} {item}"],
+    "requiredPermission": "trusted",
+    "priorityKey": "INVENTORY",
+    "skillName": "inventory",
+    "requiredEntities": ["item"],
+    "optionalEntities": ["quantity"],
+    "defaultParams": { "quantity": 1 },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  }
+]

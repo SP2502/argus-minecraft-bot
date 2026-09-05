@@ -1,0 +1,77 @@
+[
+  {
+    "name": "create_macro",
+    "phrases": [
+      "create macro {name}: {steps}",
+      "define macro {name}: {steps}",
+      "new macro {name}: {steps}",
+      "macro {name}: {steps}"
+    ],
+    "requiredPermission": "owner",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "macro",
+    "requiredEntities": ["name", "steps"],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "run_macro",
+    "phrases": [
+      "run macro {name} {params?}",
+      "exec macro {name} {params?}",
+      "execute macro {name} {params?}",
+      "run {name} {params?}"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_TASK",
+    "skillName": "macro",
+    "requiredEntities": ["name"],
+    "optionalEntities": ["params"],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "list_macros",
+    "phrases": ["list macros", "show macros", "macros"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "macro",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "show_macro",
+    "phrases": ["show macro {name}", "view macro {name}", "macro info {name}"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "macro",
+    "requiredEntities": ["name"],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "delete_macro",
+    "phrases": ["delete macro {name}", "remove macro {name}"],
+    "requiredPermission": "owner",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "macro",
+    "requiredEntities": ["name"],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": true,
+    "available": true,
+    "supportsCompound": false
+  }
+]

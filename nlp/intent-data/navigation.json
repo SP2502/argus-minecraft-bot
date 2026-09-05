@@ -1,0 +1,67 @@
+[
+  {
+    "name": "go_to",
+    "phrases": ["go to {location}", "goto {location}", "travel to {location}", "move to {location}", "head to {location}", "walk to {location}"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_TASK",
+    "skillName": "navigation",
+    "requiredEntities": ["location"],
+    "optionalEntities": ["modifier"],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "go_home",
+    "phrases": ["go home", "return home", "head home", "back home", "return to base"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_TASK",
+    "skillName": "navigation",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": { "targetLocation": "primary_base" },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "follow",
+    "phrases": ["follow {player?}", "come with me", "come here", "trail me", "follow me"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_TASK",
+    "skillName": "navigation",
+    "requiredEntities": [],
+    "optionalEntities": ["player"],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "stop_following",
+    "phrases": ["stop following", "stay here", "stay", "stop following me", "unfollow"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_TASK",
+    "skillName": "navigation",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "retrace_steps",
+    "phrases": ["retrace steps", "go back", "retrace"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_TASK",
+    "skillName": "navigation",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  }
+]

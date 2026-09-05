@@ -1,0 +1,67 @@
+[
+  {
+    "name": "help",
+    "phrases": ["help", "help me", "what can you do", "commands", "show commands", "list commands"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "core",
+    "requiredEntities": [],
+    "optionalEntities": ["feature"],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "status",
+    "phrases": ["status", "how are you", "what are you doing", "system status", "bot status", "info"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "core",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "where_are_you",
+    "phrases": ["where are you", "where r u", "coords", "coordinates", "what is your location", "current position"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "core",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "health_status",
+    "phrases": ["health", "safety status", "check safety", "are you safe", "vitals"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "core",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "uptime",
+    "phrases": ["uptime", "how long have you been running", "version"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "core",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  }
+]

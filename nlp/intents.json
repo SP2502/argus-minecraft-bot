@@ -1,0 +1,21 @@
+{
+  "_comment": "Intent schema definition mapping verbs and phrases to skills.",
+  "mine": {
+    "verbs": ["mine", "dig", "extract", "gather", "collect"],
+    "params": {
+      "targetOre": { "type": "string", "default": "diamond" },
+      "quantity": { "type": "number", "default": 64 },
+      "yLevel": { "type": "number", "default": null },
+      "opportunistic": { "type": "boolean", "default": true }
+    }
+  },
+  "farm": {
+    "verbs": ["farm", "harvest", "plant", "grow", "cultivate"],
+    "params": {
+      "targetCrop": { "type": "string", "default": "wheat" },
+      "useBoneMeal": { "type": "boolean", "default": true },
+      "registerFarm": { "type": "boolean", "default": false },
+      "farmName": { "type": "string", "default": null }
+    }
+  }
+}

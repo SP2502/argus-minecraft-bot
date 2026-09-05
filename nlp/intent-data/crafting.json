@@ -1,0 +1,47 @@
+[
+  {
+    "name": "craft",
+    "phrases": [
+      "craft {quantity?} {item}",
+      "craft {item}",
+      "make {quantity?} {item}",
+      "make {item}",
+      "forge {quantity?} {item}",
+      "forge {item}"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "AUTONOMOUS",
+    "skillName": "craft",
+    "requiredEntities": ["item"],
+    "optionalEntities": ["quantity"],
+    "defaultParams": {
+      "mode": "craft",
+      "quantity": 1
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "smelt",
+    "phrases": [
+      "smelt {quantity?} {item} with {fuel?}",
+      "smelt {quantity?} {item}",
+      "smelt {item}",
+      "cook {quantity?} {item}",
+      "cook {item}"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "AUTONOMOUS",
+    "skillName": "craft",
+    "requiredEntities": ["item"],
+    "optionalEntities": ["quantity", "fuel"],
+    "defaultParams": {
+      "mode": "smelt",
+      "quantity": 1
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  }
+]

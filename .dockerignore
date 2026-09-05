@@ -1,0 +1,10 @@
+node_modules
+.git
+.env
+data
+logs
+*.log
+*.tmp
+*.bak
+*.zip
+.DS_Store

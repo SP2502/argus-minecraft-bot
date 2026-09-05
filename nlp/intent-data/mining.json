@@ -1,0 +1,22 @@
+[
+  {
+    "name": "mine",
+    "phrases": [
+      "mine {quantity?} {item?}",
+      "dig {quantity?} {item?}",
+      "extract {quantity?} {item?}",
+      "gather {quantity?} {item?}",
+      "get {quantity?} {item?}",
+      "collect {quantity?} {item?}"
+    ],
+    "requiredPermission": "admin",
+    "priorityKey": "MINING_TASK",
+    "skillName": "mine",
+    "requiredEntities": [],
+    "optionalEntities": ["quantity", "item", "coordinates", "modifier"],
+    "defaultParams": { "targetOre": "diamond", "quantity": 64, "opportunistic": true },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  }
+]

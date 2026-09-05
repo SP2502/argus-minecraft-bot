@@ -1,0 +1,54 @@
+[
+  {
+    "name": "quiet_mode_on",
+    "phrases": ["quiet mode on", "quiet on", "be quiet", "silence", "shh"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "communication",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": { "enabled": true },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "quiet_mode_off",
+    "phrases": ["quiet mode off", "quiet off", "speak", "unmute"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "communication",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": { "enabled": false },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "dnd",
+    "phrases": ["dnd for {duration}", "do not disturb for {duration}", "dnd"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "communication",
+    "requiredEntities": [],
+    "optionalEntities": ["duration"],
+    "defaultParams": { "durationMs": 3600000 },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "dnd_off",
+    "phrases": ["dnd off", "disable dnd", "cancel dnd"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "communication",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  }
+]

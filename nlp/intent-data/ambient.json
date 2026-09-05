@@ -1,0 +1,66 @@
+[
+  {
+    "name": "ambient_mode",
+    "phrases": [
+      "enable ambient",
+      "disable ambient",
+      "ambient mode on",
+      "ambient mode off",
+      "toggle ambient",
+      "ambient on",
+      "ambient off",
+      "start ambient",
+      "stop ambient"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "STATS",
+    "skillName": null,
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {
+      "mode": "toggle"
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "sleep",
+    "phrases": [
+      "sleep",
+      "go to bed",
+      "sleep in bed",
+      "rest in bed",
+      "take a nap",
+      "nap"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "STATS",
+    "skillName": null,
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "wake",
+    "phrases": [
+      "wake up",
+      "wake",
+      "get up",
+      "get out of bed",
+      "leave bed"
+    ],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": null,
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  }
+]

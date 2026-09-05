@@ -1,0 +1,59 @@
+[
+  {
+    "name": "grant_permission",
+    "phrases": [
+      "grant {player} {role}",
+      "grant {player} {role} for {duration}",
+      "give {player} {role}",
+      "authorize {player} as {role}"
+    ],
+    "requiredPermission": "owner",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "security",
+    "requiredEntities": ["player", "role"],
+    "optionalEntities": ["duration"],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "revoke_permission",
+    "phrases": ["revoke {player}", "demote {player}", "block {player}", "ban {player}"],
+    "requiredPermission": "admin",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "security",
+    "requiredEntities": ["player"],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": true,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "who_has_access",
+    "phrases": ["who has access", "list permissions", "users", "show roles", "permissions"],
+    "requiredPermission": "admin",
+    "priorityKey": "STATS",
+    "skillName": "security",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "security_log",
+    "phrases": ["security log", "audit log", "show audit", "recent attempts"],
+    "requiredPermission": "admin",
+    "priorityKey": "STATS",
+    "skillName": "security",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  }
+]

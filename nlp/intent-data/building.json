@@ -1,0 +1,33 @@
+[
+  {
+    "name": "build",
+    "phrases": [
+      "build {structure}",
+      "build {structure} with {material}",
+      "build {structure} of {material}",
+      "build {dimensions} {structure}",
+      "build {dimensions} {structure} with {material}",
+      "build {dimensions} {structure} of {material}",
+      "build {structure} {dimensions}",
+      "build {structure} {dimensions} with {material}",
+      "build {structure} {dimensions} of {material}",
+      "construct {structure}",
+      "construct {dimensions} {structure}",
+      "construct {structure} with {material}",
+      "erect {structure}",
+      "make {structure}"
+    ],
+    "requiredPermission": "admin",
+    "priorityKey": "AUTONOMOUS",
+    "skillName": "build",
+    "requiredEntities": ["structure"],
+    "optionalEntities": ["material", "dimensions"],
+    "defaultParams": {
+      "structure": "shelter",
+      "material": "cobblestone"
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  }
+]

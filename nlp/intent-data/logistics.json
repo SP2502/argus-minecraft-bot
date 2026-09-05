@@ -1,0 +1,94 @@
+[
+  {
+    "name": "sort_warehouse",
+    "phrases": [
+      "sort warehouse",
+      "sort chests",
+      "organize base",
+      "organize chests",
+      "sort storage",
+      "store to warehouse",
+      "deposit to warehouse"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "AUTONOMOUS",
+    "skillName": "logistics",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {
+      "mode": "sort"
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "restock",
+    "phrases": [
+      "restock {kit?}",
+      "restock",
+      "resupply {kit?}",
+      "resupply",
+      "get supplies",
+      "restock supplies",
+      "restock kit {kit?}"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "AUTONOMOUS",
+    "skillName": "logistics",
+    "requiredEntities": [],
+    "optionalEntities": ["kit"],
+    "defaultParams": {
+      "mode": "restock",
+      "kit": "default"
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "index_chests",
+    "phrases": [
+      "index chests",
+      "scan warehouse",
+      "index warehouse",
+      "scan chests",
+      "audit storage",
+      "catalog warehouse"
+    ],
+    "requiredPermission": "admin",
+    "priorityKey": "AUTONOMOUS",
+    "skillName": "logistics",
+    "requiredEntities": [],
+    "optionalEntities": ["quantity"],
+    "defaultParams": {
+      "mode": "index",
+      "radius": 24
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "find_item",
+    "phrases": [
+      "find item {item}",
+      "find {item}",
+      "where is {item}",
+      "locate {item}",
+      "search for {item}",
+      "lookup {item}"
+    ],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "logistics",
+    "requiredEntities": ["item"],
+    "optionalEntities": [],
+    "defaultParams": {
+      "mode": "locate"
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  }
+]

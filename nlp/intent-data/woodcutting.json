@@ -1,0 +1,58 @@
+[
+  {
+    "name": "chop_tree",
+    "phrases": [
+      "cut {quantity?} {treeType?} logs",
+      "cut {quantity?} {treeType?} wood",
+      "cut {quantity?} {treeType?} trees",
+      "chop {quantity?} {treeType?} trees",
+      "chop {quantity?} {treeType?} logs",
+      "chop {quantity?} {treeType?} wood",
+      "chop trees",
+      "cut wood",
+      "collect {quantity?} {treeType?} wood",
+      "collect {quantity?} {treeType?} logs",
+      "harvest {treeType?} wood",
+      "harvest {treeType?} logs",
+      "get logs",
+      "get wood",
+      "cut wood at {location}",
+      "cut {treeType?} trees near me",
+      "get wood until inventory full"
+    ],
+    "requiredPermission": "admin",
+    "priorityKey": "WOODCUTTING_TASK",
+    "skillName": "chop_tree",
+    "requiredEntities": [],
+    "optionalEntities": ["quantity", "treeType", "location", "replant", "searchRadius"],
+    "defaultParams": {
+      "treeType": "any",
+      "quantity": 64,
+      "replant": true,
+      "collectSaplings": true,
+      "collectApples": true,
+      "searchRadius": 48
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "set_forestry_replant",
+    "phrases": [
+      "plant saplings after cutting",
+      "stop replanting saplings",
+      "enable replanting",
+      "disable replanting"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "chop_tree",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": { "replant": true },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  }
+]

@@ -1,0 +1,11 @@
+/**
+ * NLP Confidence Thresholds and Tuning Parameters
+ */
+module.exports = {
+  AUTO_CORRECT_CONFIDENCE: 0.90,
+  SUGGEST_CORRECTION_CONFIDENCE: 0.70,
+  MIN_INTENT_CONFIDENCE: 0.65,
+  HIGH_INTENT_CONFIDENCE: 0.85,
+  MAX_SUGGESTIONS: 3,
+  MAX_EDIT_DISTANCE_SHORT: 2,
+};

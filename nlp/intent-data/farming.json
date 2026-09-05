@@ -1,0 +1,22 @@
+[
+  {
+    "name": "farm",
+    "phrases": [
+      "farm {crop?}",
+      "harvest {crop?}",
+      "cultivate {crop?}",
+      "grow {crop?}",
+      "reap {crop?}",
+      "farm crops"
+    ],
+    "requiredPermission": "admin",
+    "priorityKey": "FARMING_TASK",
+    "skillName": "farm",
+    "requiredEntities": [],
+    "optionalEntities": ["crop", "quantity", "modifier", "location"],
+    "defaultParams": { "targetCrop": "wheat", "useBoneMeal": true },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "name": "stop",
+    "phrases": ["stop", "halt", "pause", "wait", "hold on", "freeze"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "control",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "resume",
+    "phrases": ["resume", "continue", "unpause", "keep going"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "control",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "cancel",
+    "phrases": ["cancel", "cancel current", "cancel task", "abort"],
+    "requiredPermission": "trusted",
+    "priorityKey": "OWNER_COMMAND",
+    "skillName": "control",
+    "requiredEntities": [],
+    "optionalEntities": ["task_id"],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "stop_all",
+    "phrases": ["stop all", "cancel all", "clear queue", "emergency stop"],
+    "requiredPermission": "admin",
+    "priorityKey": "EMERGENCY",
+    "skillName": "control",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  },
+  {
+    "name": "queue",
+    "phrases": ["queue", "show queue", "tasks", "list tasks"],
+    "requiredPermission": "guest",
+    "priorityKey": "STATS",
+    "skillName": "control",
+    "requiredEntities": [],
+    "optionalEntities": [],
+    "defaultParams": {},
+    "destructive": false,
+    "available": true,
+    "supportsCompound": false
+  }
+]

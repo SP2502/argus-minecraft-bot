@@ -1,0 +1,79 @@
+[
+  {
+    "name": "combat",
+    "phrases": [
+      "kill {quantity?} {mobType?} mobs",
+      "kill {quantity?} {mobType?}",
+      "hunt {quantity?} {mobType?}",
+      "hunt {mobType?}",
+      "slay {quantity?} {mobType?}",
+      "slay {mobType?}",
+      "eliminate {quantity?} {mobType?}",
+      "eliminate {mobType?}",
+      "attack {mobType?}",
+      "clear hostiles",
+      "clear enemies",
+      "clear monsters",
+      "clear mobs"
+    ],
+    "requiredPermission": "admin",
+    "priorityKey": "COMBAT",
+    "skillName": "combat",
+    "requiredEntities": [],
+    "optionalEntities": ["quantity", "mobType", "searchRadius"],
+    "defaultParams": {
+      "mode": "hunt",
+      "targetMob": "any",
+      "quantity": 10,
+      "searchRadius": 32
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "guard",
+    "phrases": [
+      "protect {player?}",
+      "protect me",
+      "guard {player?}",
+      "guard me",
+      "defend {location?}",
+      "defend base",
+      "guard base"
+    ],
+    "requiredPermission": "trusted",
+    "priorityKey": "SECURITY_ALERT",
+    "skillName": "combat",
+    "requiredEntities": [],
+    "optionalEntities": ["player", "location"],
+    "defaultParams": {
+      "mode": "guard",
+      "targetMob": "any"
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  },
+  {
+    "name": "patrol",
+    "phrases": [
+      "patrol {location?}",
+      "patrol base",
+      "patrol outpost",
+      "patrol perimeter"
+    ],
+    "requiredPermission": "admin",
+    "priorityKey": "AUTONOMOUS",
+    "skillName": "combat",
+    "requiredEntities": [],
+    "optionalEntities": ["location"],
+    "defaultParams": {
+      "mode": "patrol",
+      "targetMob": "any"
+    },
+    "destructive": false,
+    "available": true,
+    "supportsCompound": true
+  }
+]
