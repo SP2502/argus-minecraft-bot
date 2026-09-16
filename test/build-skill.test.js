@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const BuildSkill = require('../skills/building/BuildSkill');
+const { BuildSkill } = require('../src/modules/building');
 const { SkillAbort } = require('../skills/BaseSkill');
 
 test('BuildSkill - Autonomous Structure Construction and Event Emission', async () => {

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const buildingPolicies = require('../skills/building/buildingPolicies');
+const { buildingPolicies } = require('../src/modules/building');
 
 test('BuildingPolicies - Placement Order Sorting', () => {
   const blocks = [

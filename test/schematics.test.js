@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const schematics = require('../skills/building/schematics');
+const { schematics } = require('../src/modules/building');
 
 test('Procedural Schematics - Wall Generation', () => {
   // 1. Wall along X axis (10 blocks long, 3 high)

@@ -211,7 +211,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('Building - 50-Block Construction Checkpoints', async (t) => {
-    const BuildSkill = require('../skills/building/BuildSkill');
+    const { BuildSkill } = require('../src/modules/building');
     const events = new EventEmitter();
     let checkpointEmitted = false;
 

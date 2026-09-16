@@ -175,7 +175,7 @@ class EntityExtractor {
     const matMatch = clean.match(/(?:with|of)\s+([a-zA-Z_]+(?:\s+[a-zA-Z_]+)?)/i);
     if (matMatch) {
       const candidateMat = matMatch[1].trim().toLowerCase().replace(/\s+/g, '_');
-      const buildingData = require('../../../skills/building/buildingData');
+      const { buildingData } = require('../building');
       if (buildingData.validBuildingMaterials.includes(candidateMat) || buildingData.materialAliases[candidateMat]) {
         entities.material = buildingData.materialAliases[candidateMat] || candidateMat;
       }

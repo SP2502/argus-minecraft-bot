@@ -2,7 +2,7 @@
  * Building Policies - Pure Decision and Sorting Logic for Construction.
  * Zero Mineflayer calls — 100% deterministic and unit-testable.
  */
-const buildingData = require('./buildingData');
+const buildingData = require('./building.data');
 
 /**
  * Sorts block coordinates in optimal placement sequence.

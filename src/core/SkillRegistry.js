@@ -9,7 +9,7 @@ const registry = {
   chop_tree: require('../../skills/woodcutting/ChopTreeSkill'),
   combat: require('../modules/combat').CombatSkill,
   craft: require('../../skills/crafting/CraftSkill'),
-  build: require('../../skills/building/BuildSkill'),
+  build: require('../modules/building').BuildSkill,
   logistics: require('../../skills/logistics/LogisticsSkill'),
   navigation: require('../../skills/navigation/NavigationSkill')
 };

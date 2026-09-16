@@ -1,8 +1,8 @@
-const { BaseSkill, SkillAbort } = require('../BaseSkill');
-const buildingConfig = require('../../config/buildingConfig');
-const buildingData = require('./buildingData');
+const { BaseSkill, SkillAbort } = require('../../../skills/BaseSkill');
+const buildingConfig = require('./building.config');
+const buildingData = require('./building.data');
 const schematics = require('./schematics');
-const buildingPolicies = require('./buildingPolicies');
+const buildingPolicies = require('./building.policy');
 
 /**
  * BuildSkill - Autonomous Architectural Construction Subsystem.
