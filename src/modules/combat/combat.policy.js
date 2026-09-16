@@ -1,6 +1,6 @@
-const combatData = require('./combatData');
-const combatConfig = require('../../config/combatConfig');
-const MobTactics = require('./MobTactics');
+const combatData = require('./combat.data');
+const combatConfig = require('./combat.config');
+const MobTactics = require('./mob-tactics');
 
 /**
  * Pure combat decision policies and threat evaluations.

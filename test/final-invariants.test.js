@@ -255,8 +255,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('Combat - Passive Mob, Villager, Golem & Player Protection', () => {
-    const combatPolicies = require('../skills/combat/combatPolicies');
-    const combatData = require('../skills/combat/combatData');
+    const { combatPolicies, combatData } = require('../src/modules/combat');
 
     const villager = { name: 'villager', type: 'mob' };
     const ironGolem = { name: 'iron_golem', type: 'mob' };

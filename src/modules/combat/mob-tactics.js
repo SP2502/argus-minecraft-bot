@@ -1,4 +1,4 @@
-const combatConfig = require('../../config/combatConfig');
+const combatConfig = require('./combat.config');
 
 /**
  * MobTactics - Optimized Combat Strategy Engine for Every Minecraft Hostile Mob.

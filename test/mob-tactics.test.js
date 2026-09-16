@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const MobTactics = require('../skills/combat/MobTactics');
+const { MobTactics } = require('../src/modules/combat');
 
 test('MobTactics - Tactic Resolution Across All Minecraft Hostile Mobs', () => {
   const botHealthyWithShield = { health: 20, position: { x: 0, y: 64, z: 0 }, hasShield: true };

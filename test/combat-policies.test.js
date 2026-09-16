@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const combatPolicies = require('../skills/combat/combatPolicies');
+const { combatPolicies } = require('../src/modules/combat');
 
 test('CombatPolicies - Hostility and Drop Collection', () => {
   const zombie = { name: 'zombie' };

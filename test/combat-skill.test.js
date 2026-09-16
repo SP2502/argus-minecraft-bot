@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const CombatSkill = require('../skills/combat/CombatSkill');
+const { CombatSkill } = require('../src/modules/combat');
 
 test('CombatSkill - Autonomous Hunting, Attack Execution, and Drop Pickup', async () => {
   let attackCount = 0;

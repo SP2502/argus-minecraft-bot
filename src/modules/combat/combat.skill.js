@@ -1,10 +1,10 @@
-const { BaseSkill } = require('../BaseSkill');
-const combatData = require('./combatData');
-const combatPolicies = require('./combatPolicies');
-const combatConfig = require('../../config/combatConfig');
-const CombatHelperService = require('../../services/CombatHelperService');
-const MobTactics = require('./MobTactics');
-const eventBus = require('../../src/core/EventBus');
+const { BaseSkill } = require('../../../skills/BaseSkill');
+const combatData = require('./combat.data');
+const combatPolicies = require('./combat.policy');
+const combatConfig = require('./combat.config');
+const CombatHelperService = require('./combat.service');
+const MobTactics = require('./mob-tactics');
+const eventBus = require('../../core/EventBus');
 
 /**
  * CombatSkill - Autonomous combat, hostile mob hunting, bodyguard protection, and base patrol.

@@ -7,7 +7,7 @@ const registry = {
   mine: require('../../skills/mining/MineSkill'),
   farm: require('../../skills/farming/FarmSkill'),
   chop_tree: require('../../skills/woodcutting/ChopTreeSkill'),
-  combat: require('../../skills/combat/CombatSkill'),
+  combat: require('../modules/combat').CombatSkill,
   craft: require('../../skills/crafting/CraftSkill'),
   build: require('../../skills/building/BuildSkill'),
   logistics: require('../../skills/logistics/LogisticsSkill'),

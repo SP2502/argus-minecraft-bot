@@ -1,7 +1,7 @@
-const combatData = require('../skills/combat/combatData');
-const combatPolicies = require('../skills/combat/combatPolicies');
-const combatConfig = require('../config/combatConfig');
-const MobTactics = require('../skills/combat/MobTactics');
+const combatData = require('./combat.data');
+const combatPolicies = require('./combat.policy');
+const combatConfig = require('./combat.config');
+const MobTactics = require('./mob-tactics');
 
 /**
  * CombatHelperService - Evaluates hostiles, threat rankings, loadouts, and tactical maneuvers.
