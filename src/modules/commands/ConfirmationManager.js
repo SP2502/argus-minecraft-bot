@@ -1,4 +1,4 @@
-const commandPolicies = require('../../../config/commandPolicies');
+const commandPolicies = require('../security/command-policies');
 
 /**
  * ConfirmationManager - Enforces explicit user confirmation for dangerous or destructive operations.

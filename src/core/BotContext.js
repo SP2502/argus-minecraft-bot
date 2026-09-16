@@ -13,7 +13,7 @@ const AmbientBehaviorService = require('../../services/AmbientBehaviorService');
 const HumanoidBehaviorService = require('../../services/HumanoidBehaviorService');
 const SkillRegistry = require('./SkillRegistry');
 const { TaskManager } = require('./TaskManager');
-const { PermissionManager } = require('../../security/PermissionManager');
+const { PermissionManager } = require('../modules/security');
 const MessageRouter = require('../shared/communication/MessageRouter');
 const WebhookDispatcher = require('../shared/communication/WebhookDispatcher');
 

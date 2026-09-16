@@ -4,7 +4,7 @@ const express = require('express');
 const createStatusRouter = require('./routes/status');
 const { createRestCommandRouter } = require('../../commands/adapters/RestCommandAdapter');
 const { setupWebSocketServer } = require('./websocket');
-const CommandAudit = require('../../../../models/CommandAudit');
+const CommandAudit = require('../../security/command-audit.model');
 const { createSessionToken, verifySessionToken, extractBearerToken, validateConfig } = require('../../../core/SessionAuth');
 
 /**

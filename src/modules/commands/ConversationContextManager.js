@@ -1,4 +1,4 @@
-const commandPolicies = require('../../../config/commandPolicies');
+const commandPolicies = require('../security/command-policies');
 
 /**
  * ConversationContextManager - Session-scoped conversation memory, pronoun resolution,

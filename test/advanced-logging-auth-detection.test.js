@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const serverAuthManager = require('../src/core/ServerAuthManager');
-const { PermissionManager, PermissionTiers } = require('../security/PermissionManager');
+const { PermissionManager, PermissionTiers } = require('../src/modules/security');
 const logger = require('../src/core/Logger');
 
 test('Dynamic Owner Configuration & Elimination of Hardcoded Names', async (t) => {

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { PermissionManager, PermissionTiers } = require('../security/PermissionManager');
+const { PermissionManager, PermissionTiers } = require('../src/modules/security');
 const AIBrain = require('../src/core/AIBrain');
 const TaskManager = require('../src/core/TaskManager');
 const LockManager = require('../src/core/LockManager');
