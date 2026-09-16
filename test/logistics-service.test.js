@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const LogisticsService = require('../services/LogisticsService');
+const { LogisticsService } = require('../src/modules/logistics');
 
 test('LogisticsService - Scan and Index Containers in Warehouse', async () => {
   const chestPos = { x: 10, y: 64, z: 10 };

@@ -1,5 +1,5 @@
-const { BaseSkill } = require('../BaseSkill');
-const logisticsData = require('./logisticsData');
+const { BaseSkill } = require('../../../skills/BaseSkill');
+const logisticsData = require('./logistics.data');
 
 /**
  * LogisticsSkill - Autonomous Warehouse Management, Multi-Chest Sorting,

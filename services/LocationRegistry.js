@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Location = require('../models/Location');
-const Chest = require('../models/Chest');
+const { Chest } = require('../src/modules/logistics');
 const { LocationTypes } = require('../config/constants');
 
 /**

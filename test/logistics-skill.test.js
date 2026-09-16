@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const LogisticsSkill = require('../skills/logistics/LogisticsSkill');
+const { LogisticsSkill } = require('../src/modules/logistics');
 
 test('LogisticsSkill - End-to-End Execution across Modes', async () => {
   let sortCalled = false;

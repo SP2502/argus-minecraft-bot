@@ -5,6 +5,7 @@ const CommandPlanner = require('../src/modules/commands/CommandPlanner');
 const intentParser = require('../src/modules/nlp/IntentParser');
 const conversationContext = require('../src/modules/commands/ConversationContextManager');
 const confirmationManager = require('../src/modules/commands/ConfirmationManager');
+require('../src/modules/logistics');
 
 test('Logistics Command - Gateway NLP, Planning, and RBAC Execution', async () => {
   const queuedTasks = [];

@@ -1,9 +1,9 @@
-const logisticsConfig = require('../config/logisticsConfig');
-const logisticsData = require('../skills/logistics/logisticsData');
-const itemCategories = require('../config/itemCategories');
-const { openChest, moveItemsToChest, closeChest, getChestContents } = require('./ChestInteract');
+const logisticsConfig = require('./logistics.config');
+const logisticsData = require('./logistics.data');
+const itemCategories = require('../../../config/itemCategories');
+const { openChest, moveItemsToChest, closeChest, getChestContents } = require('../../../services/ChestInteract');
 const mongoose = require('mongoose');
-const Chest = require('../models/Chest');
+const Chest = require('./chest.model');
 
 /**
  * LogisticsService - Automated Base Warehouse Management, Storage Indexing,
