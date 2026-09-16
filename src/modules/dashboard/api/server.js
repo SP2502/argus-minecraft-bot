@@ -58,7 +58,7 @@ function startServer(ctx, port = process.env.PORT || 3000) {
   const statusRouter = createStatusRouter(ctx);
   app.use('/api', statusRouter);
 
-  const createServerAuthRouter = require('./routes/serverAuth');
+  const { createServerAuthRouter } = require('../../server-auth');
   const serverAuthRouter = createServerAuthRouter();
   app.use('/api/auth', serverAuthRouter);
 

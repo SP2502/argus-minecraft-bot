@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const serverAuthManager = require('../src/core/ServerAuthManager');
+const { serverAuthManager } = require('../src/modules/server-auth');
 
 test('ServerAuthManager - In-Game Server Auth & Offline Database Suite', async (t) => {
   await t.test('Password Generation - Cryptographic Security & Format', () => {

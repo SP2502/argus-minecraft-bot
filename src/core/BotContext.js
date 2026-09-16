@@ -60,7 +60,7 @@ class BotContext {
     this.messageRouter = new MessageRouter(bot, process.env.OWNER_USERNAME, this.webhooks);
     this.permissionManager = new PermissionManager();
     this.permissions = this.permissionManager; // Alias
-    this.serverAuth = require('./ServerAuthManager');
+    this.serverAuth = require('../modules/server-auth').serverAuthManager;
     this.taskManager = new TaskManager(this);
 
     // 3. Natural Language Understanding & Unified Command Gateway

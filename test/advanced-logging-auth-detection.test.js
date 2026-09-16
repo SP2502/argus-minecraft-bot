@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const serverAuthManager = require('../src/core/ServerAuthManager');
+const { serverAuthManager } = require('../src/modules/server-auth');
 const { PermissionManager, PermissionTiers } = require('../src/modules/security');
 const logger = require('../src/core/Logger');
 

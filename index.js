@@ -9,7 +9,7 @@ const AIBrain = require('./src/core/AIBrain');
 const { startServer } = require('./src/modules/dashboard/api/server');
 const eventBus = require('./src/core/EventBus');
 const MinecraftChatAdapter = require('./src/modules/commands/adapters/MinecraftChatAdapter');
-const serverAuthManager = require('./src/core/ServerAuthManager');
+const { serverAuthManager } = require('./src/modules/server-auth');
 const logger = require('./src/core/Logger');
 
 let bot = null;

@@ -1,7 +1,7 @@
 const crypto = require('crypto');
-const persistenceManager = require('./PersistenceManager');
-const eventBus = require('./EventBus');
-const logger = require('./Logger');
+const persistenceManager = require('../../core/PersistenceManager');
+const eventBus = require('../../core/EventBus');
+const logger = require('../../core/Logger');
 
 /**
  * ServerAuthManager - Manages in-game server authentication (AuthMe, LoginSecurity, nLogin, etc.).
@@ -83,7 +83,7 @@ class ServerAuthManager {
     try {
       const mongoose = require('mongoose');
       if (mongoose.connection && mongoose.connection.readyState === 1) {
-        const ServerPassword = require('../../models/ServerPassword');
+        const ServerPassword = require('./server-password.model');
         for (const val of this.memoryCache.values()) {
           await ServerPassword.findOneAndUpdate(
             { serverKey: val.serverKey },
@@ -137,7 +137,7 @@ class ServerAuthManager {
     try {
       const mongoose = require('mongoose');
       if (mongoose.connection && mongoose.connection.readyState === 1) {
-        const ServerPassword = require('../../models/ServerPassword');
+        const ServerPassword = require('./server-password.model');
         const doc = await ServerPassword.findOne({ serverKey: key }).lean();
         if (doc) {
           this.memoryCache.set(key, doc);
@@ -220,7 +220,7 @@ class ServerAuthManager {
       try {
         const mongoose = require('mongoose');
         if (mongoose.connection && mongoose.connection.readyState === 1) {
-          const ServerPassword = require('../../models/ServerPassword');
+          const ServerPassword = require('./server-password.model');
           await ServerPassword.deleteOne({ serverKey });
         }
       } catch (e) {}
