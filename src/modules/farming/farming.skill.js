@@ -1,5 +1,5 @@
-const { BaseSkill, SkillAbort } = require('../BaseSkill');
-const cropData = require('./cropData');
+const { BaseSkill, SkillAbort } = require('../../../skills/BaseSkill');
+const cropData = require('./crops.data');
 
 /**
  * FarmSkill - Autonomous agricultural harvesting, immediate replanting, and crop cultivation.

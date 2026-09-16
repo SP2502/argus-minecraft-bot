@@ -5,7 +5,7 @@ const AIBrain = require('../src/core/AIBrain');
 const TaskManager = require('../src/core/TaskManager');
 const LockManager = require('../src/core/LockManager');
 const InventoryService = require('../services/InventoryService');
-const FarmSkill = require('../skills/farming/FarmSkill');
+const { FarmSkill } = require('../src/modules/farming');
 const { EventEmitter } = require('events');
 
 test('Final Invariants & Regression Test Suite', async (t) => {
