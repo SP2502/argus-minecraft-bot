@@ -1,5 +1,5 @@
-const forestryConfig = require('../../config/forestryConfig');
-const treeData = require('./treeData');
+const forestryConfig = require('./forestry.config');
+const treeData = require('./forestry.data');
 
 /**
  * Pure forestry policy rules and decision evaluation functions.

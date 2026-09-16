@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const forestryPolicies = require('../skills/woodcutting/forestryPolicies');
+const { forestryPolicies } = require('../src/modules/forestry');
 
 test('ForestryPolicies - Replant Requirements and Drops', () => {
   assert.strictEqual(forestryPolicies.getReplantRequirement('oak'), 1);

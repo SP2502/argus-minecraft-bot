@@ -1,9 +1,9 @@
-const { BaseSkill } = require('../BaseSkill');
-const TreeAnalyzer = require('./TreeAnalyzer');
-const treeData = require('./treeData');
-const forestryPolicies = require('./forestryPolicies');
-const forestryConfig = require('../../config/forestryConfig');
-const eventBus = require('../../src/core/EventBus');
+const { BaseSkill } = require('../../../skills/BaseSkill');
+const TreeAnalyzer = require('./tree-analyzer');
+const treeData = require('./forestry.data');
+const forestryPolicies = require('./forestry.policy');
+const forestryConfig = require('./forestry.config');
+const eventBus = require('../../core/EventBus');
 
 /**
  * ChopTreeSkill - Autonomous forestry and tree harvesting skill.

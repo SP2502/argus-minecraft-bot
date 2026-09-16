@@ -1,8 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const TreeAnalyzer = require('../skills/woodcutting/TreeAnalyzer');
-const treeData = require('../skills/woodcutting/treeData');
-const forestryConfig = require('../config/forestryConfig');
+const { TreeAnalyzer, treeData, forestryConfig } = require('../src/modules/forestry');
 
 test('TreeAnalyzer - Family Identification and Analysis', () => {
   const analyzer = new TreeAnalyzer(null, treeData, forestryConfig);

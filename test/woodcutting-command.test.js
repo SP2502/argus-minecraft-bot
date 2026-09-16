@@ -5,6 +5,7 @@ const CommandPlanner = require('../src/modules/commands/CommandPlanner');
 const intentParser = require('../src/modules/nlp/IntentParser');
 const conversationContext = require('../src/modules/commands/ConversationContextManager');
 const confirmationManager = require('../src/modules/commands/ConfirmationManager');
+require('../src/modules/forestry');
 
 test('Woodcutting Command - NLP Parsing, Planning, and Gateway Authorization', async () => {
   const queuedTasks = [];

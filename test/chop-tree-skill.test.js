@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const ChopTreeSkill = require('../skills/woodcutting/ChopTreeSkill');
+const { ChopTreeSkill } = require('../src/modules/forestry');
 
 test('ChopTreeSkill - Autonomous Harvesting, Service Reuse, and Replanting', async () => {
   let depositCalled = false;

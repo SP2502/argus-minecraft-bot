@@ -1,5 +1,5 @@
-const treeData = require('./treeData');
-const forestryConfig = require('../../config/forestryConfig');
+const treeData = require('./forestry.data');
+const forestryConfig = require('./forestry.config');
 
 /**
  * TreeAnalyzer - Identifies and analyzes tree structures in the Minecraft world.
