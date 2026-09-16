@@ -1,7 +1,7 @@
 const logisticsConfig = require('./logistics.config');
 const logisticsData = require('./logistics.data');
-const itemCategories = require('../../../config/itemCategories');
-const { openChest, moveItemsToChest, closeChest, getChestContents } = require('../../../services/ChestInteract');
+const itemCategories = require('../inventory/item-categories');
+const { openChest, moveItemsToChest, closeChest, getChestContents } = require('../inventory/chest-interaction');
 const mongoose = require('mongoose');
 const Chest = require('./chest.model');
 

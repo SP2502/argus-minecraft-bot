@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const CraftSkill = require('../skills/crafting/CraftSkill');
+const { CraftSkill } = require('../src/modules/inventory');
 
 test('CraftSkill - Crafting and Smelting Execution Modes', async () => {
   let craftCalled = false;

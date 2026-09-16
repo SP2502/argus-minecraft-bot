@@ -9,6 +9,8 @@ const intentRegistry = require('../src/modules/nlp/IntentRegistry');
 const { IntentRegistry } = intentRegistry;
 require('../src/modules/mining');
 require('../src/modules/navigation');
+require('../src/modules/behavior');
+require('../src/modules/inventory');
 
 test('CommandPlanner - Single and Compound Sequential Plans', async () => {
   // --- Milestone 2A: Modular Intent Registration Invariant Verification ---

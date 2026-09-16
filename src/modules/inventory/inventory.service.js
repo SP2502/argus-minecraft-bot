@@ -1,6 +1,6 @@
-const defaultItemValues = require('./ItemValue');
-const itemCategories = require('../config/itemCategories');
-const { openChest, moveItemsToChest, closeChest, getChestContents } = require('./ChestInteract');
+const defaultItemValues = require('../../../services/ItemValue');
+const itemCategories = require('./item-categories');
+const { openChest, moveItemsToChest, closeChest, getChestContents } = require('./chest-interaction');
 
 /**
  * InventoryService - Centralized inventory inspection, item sorting, tossing, and chest interactions.

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const CraftingService = require('../services/CraftingService');
+const { CraftingService } = require('../src/modules/inventory');
 
 test('CraftingService - Ingredient Checking and Direct Crafting', async () => {
   const inventoryItems = [

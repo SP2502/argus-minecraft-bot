@@ -1,6 +1,6 @@
-const { BaseSkill } = require('../BaseSkill');
-const craftingData = require('./craftingData');
-const eventBus = require('../../src/core/EventBus');
+const { BaseSkill } = require('../../../skills/BaseSkill');
+const craftingData = require('./crafting.data');
+const eventBus = require('../../core/EventBus');
 
 /**
  * CraftSkill - Autonomous task handler for crafting items and furnace smelting.

@@ -4,7 +4,7 @@ const { PermissionManager, PermissionTiers } = require('../src/modules/security'
 const AIBrain = require('../src/core/AIBrain');
 const TaskManager = require('../src/core/TaskManager');
 const LockManager = require('../src/core/LockManager');
-const InventoryService = require('../services/InventoryService');
+const { InventoryService } = require('../src/modules/inventory');
 const { FarmSkill } = require('../src/modules/farming');
 const { EventEmitter } = require('events');
 
@@ -93,7 +93,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
       }
     };
     
-    const inv = new InventoryService(mockBot, { itemCategories: require('../config/itemCategories') });
+    const inv = new InventoryService(mockBot, { itemCategories: require('../src/modules/inventory/item-categories') });
     inv.countItem = (name) => mockBot.inventory.items().find(i => i.name === name)?.count || 0;
 
     await inv.depositAll('crops', { x: 0, y: 0, z: 0 });

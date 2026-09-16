@@ -1,5 +1,5 @@
-const craftingData = require('../skills/crafting/craftingData');
-const craftingConfig = require('../config/craftingConfig');
+const craftingData = require('./crafting.data');
+const craftingConfig = require('./crafting.config');
 
 /**
  * CraftingService - Autonomous recipe tree resolution, crafting table management, and furnace smelting.
