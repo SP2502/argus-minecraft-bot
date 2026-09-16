@@ -24,5 +24,13 @@
     "mineflayer-pathfinder": "^2.4.5",
     "mongoose": "^8.3.0",
     "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "madge": "^8.0.0"
+  },
+  "imports": {
+    "#core/*": "./src/core/*",
+    "#shared/*": "./src/shared/*",
+    "#modules/*": "./src/modules/*"
   }
 }
