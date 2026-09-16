@@ -1,6 +1,6 @@
 const commandSchemas = require('./CommandSchemas');
 const Priorities = require('../../../config/priorities');
-const { requiresConfirmation } = require('../../../config/dangerousCommands');
+const { requiresConfirmation } = require('./dangerous-commands');
 const AmbiguityError = require('./errors/AmbiguityError');
 
 /**
