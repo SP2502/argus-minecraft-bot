@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const AmbientBehaviorService = require('../services/AmbientBehaviorService');
+const { AmbientBehaviorService } = require('../src/modules/behavior');
 
 test('AmbientBehaviorService - Day/Night and Weather Detection', () => {
   // 1. Daytime (6000 ticks) and clear

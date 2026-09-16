@@ -1,7 +1,7 @@
 const eventBus = require('../../core/EventBus');
 const WebhookDispatcher = require('./WebhookDispatcher');
 const persistenceManager = require('../../core/PersistenceManager');
-const greetings = require('../../../config/greetings');
+const { greetings } = require('../../modules/behavior');
 
 /**
  * MessageRouter - 4-tier communication routing, message batching/deduplication,

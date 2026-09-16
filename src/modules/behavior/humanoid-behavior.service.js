@@ -1,11 +1,10 @@
 /**
- * HumanoidBehaviorService - Ultra-Realistic Human Mimicry & Anti-Bot Evasion Engine.
+ * HumanoidBehaviorService - Interaction smoothing and natural movement interpolation engine.
  * 
- * Prevents anti-bot / anti-AFK detection plugins (Matrix, Vulcan, GrimAC, Negativity, NCP) from flagging the bot.
- * Features:
- * - Smooth cubic/sinusoidal head saccades (Zero angle snaps).
- * - Organic non-deterministic timing with Poisson jitter (Zero fixed timer patterns).
- * - Social player mimicry (Crouch-greeting when players sneak nearby, eye contact tracking).
+ * Provides server-policy-compliant automation and idle presence behavior:
+ * - Smooth cubic/sinusoidal head saccades (natural movement interpolation).
+ * - Organic non-deterministic timing with Poisson jitter.
+ * - Social player mimicry (crouch-greeting when players sneak nearby, eye contact tracking).
  * - Realistic human fidget actions (arm swings, quickbar cycling, sneak-taps, weight shifts).
  */
 class HumanoidBehaviorService {
@@ -34,7 +33,7 @@ class HumanoidBehaviorService {
 
   /**
    * Generates a non-deterministic delay using Gaussian/Poisson jitter.
-   * Prevents heuristic detection from fixed interval analyzers.
+   * Promotes natural timing variance for idle presence behavior.
    * @private
    * @returns {number} Delay in milliseconds (2200ms - 6800ms)
    */

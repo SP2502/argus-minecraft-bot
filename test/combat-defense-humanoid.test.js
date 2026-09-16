@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { CombatService: CombatHelperService } = require('../src/modules/combat');
-const HumanoidBehaviorService = require('../services/HumanoidBehaviorService');
+const { HumanoidBehaviorService } = require('../src/modules/behavior');
 
 test('CombatHelperService - Threat Detection and Prioritization', () => {
   const botPos = {
