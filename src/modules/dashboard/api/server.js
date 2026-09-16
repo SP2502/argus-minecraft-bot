@@ -2,10 +2,10 @@ const http = require('http');
 const path = require('path');
 const express = require('express');
 const createStatusRouter = require('./routes/status');
-const { createRestCommandRouter } = require('../commands/adapters/RestCommandAdapter');
+const { createRestCommandRouter } = require('../../commands/adapters/RestCommandAdapter');
 const { setupWebSocketServer } = require('./websocket');
-const CommandAudit = require('../models/CommandAudit');
-const { createSessionToken, verifySessionToken, extractBearerToken, validateConfig } = require('../core/SessionAuth');
+const CommandAudit = require('../../../../models/CommandAudit');
+const { createSessionToken, verifySessionToken, extractBearerToken, validateConfig } = require('../../../core/SessionAuth');
 
 /**
  * Creates and starts Express HTTP and WebSocket API server.

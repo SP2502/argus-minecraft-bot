@@ -1,7 +1,7 @@
-const Priorities = require('../config/priorities');
+const Priorities = require('../../config/priorities');
 const LockManager = require('./LockManager');
 const SkillRegistry = require('./SkillRegistry');
-const { SkillSuspended, SkillAbort } = require('../skills/BaseSkill');
+const { SkillSuspended, SkillAbort } = require('../../skills/BaseSkill');
 
 /**
  * Task State Constants

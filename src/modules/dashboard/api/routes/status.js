@@ -103,7 +103,7 @@ function createStatusRouter(ctx) {
    * GET /stats/woodcutting - Forestry metrics and session stats
    */
   router.get('/stats/woodcutting', async (req, res) => {
-    const Statistics = require('../../models/Statistics');
+    const Statistics = require('../../../../../models/Statistics');
     try {
       const statsDoc = await Statistics.findOne({}).sort({ startTime: -1 });
       const woodcutting = (statsDoc && statsDoc.woodcutting) || {
@@ -136,7 +136,7 @@ function createStatusRouter(ctx) {
    * GET /stats/combat - Combat and defense metrics
    */
   router.get('/stats/combat', async (req, res) => {
-    const Statistics = require('../../models/Statistics');
+    const Statistics = require('../../../../../models/Statistics');
     try {
       const statsDoc = await Statistics.findOne({}).sort({ startTime: -1 });
       const combat = (statsDoc && statsDoc.combat) || {
@@ -165,7 +165,7 @@ function createStatusRouter(ctx) {
    * GET /stats/crafting - Crafting and smelting operational metrics
    */
   router.get('/stats/crafting', async (req, res) => {
-    const Statistics = require('../../models/Statistics');
+    const Statistics = require('../../../../../models/Statistics');
     try {
       const statsDoc = await Statistics.findOne({}).sort({ startTime: -1 });
       const crafting = (statsDoc && statsDoc.crafting) || {
@@ -190,7 +190,7 @@ function createStatusRouter(ctx) {
    * GET /stats/building - Construction and architectural metrics
    */
   router.get('/stats/building', async (req, res) => {
-    const Statistics = require('../../models/Statistics');
+    const Statistics = require('../../../../../models/Statistics');
     try {
       const statsDoc = await Statistics.findOne({}).sort({ startTime: -1 });
       const building = (statsDoc && statsDoc.building) || {
@@ -215,7 +215,7 @@ function createStatusRouter(ctx) {
    * GET /stats/logistics - Warehouse and storage management metrics
    */
   router.get('/stats/logistics', async (req, res) => {
-    const Statistics = require('../../models/Statistics');
+    const Statistics = require('../../../../../models/Statistics');
     try {
       const statsDoc = await Statistics.findOne({}).sort({ startTime: -1 });
       const logistics = (statsDoc && statsDoc.logistics) || {

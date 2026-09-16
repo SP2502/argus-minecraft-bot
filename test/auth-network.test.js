@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const authManager = require('../core/AuthManager');
+const authManager = require('../src/core/AuthManager');
 
 test('AuthManager & Network Reliability Test Suite', async (t) => {
   await t.test('Keep-Alive Timeout Configuration', () => {

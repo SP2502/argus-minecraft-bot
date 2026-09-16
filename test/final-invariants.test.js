@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { PermissionManager, PermissionTiers } = require('../security/PermissionManager');
-const AIBrain = require('../core/AIBrain');
-const TaskManager = require('../core/TaskManager');
-const LockManager = require('../core/LockManager');
+const AIBrain = require('../src/core/AIBrain');
+const TaskManager = require('../src/core/TaskManager');
+const LockManager = require('../src/core/LockManager');
 const InventoryService = require('../services/InventoryService');
 const FarmSkill = require('../skills/farming/FarmSkill');
 const { EventEmitter } = require('events');
@@ -126,7 +126,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('Persistence - Checksum Verification & Corrupted State Recovery', async (t) => {
-    const pm = require('../core/PersistenceManager');
+    const pm = require('../src/core/PersistenceManager');
     const testFile = 'test_corrupted_state.json';
     const initialData = { botName: 'Argus', version: '1.0.0', seed: 12345 };
 
@@ -272,7 +272,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('TaskManager - Preemption and Priority Orchestration', async (t) => {
-    const { TaskManager } = require('../core/TaskManager');
+    const { TaskManager } = require('../src/core/TaskManager');
     const events = new EventEmitter();
     const ctx = { events, currentTask: null };
     const tm = new TaskManager(ctx);

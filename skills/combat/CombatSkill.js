@@ -4,7 +4,7 @@ const combatPolicies = require('./combatPolicies');
 const combatConfig = require('../../config/combatConfig');
 const CombatHelperService = require('../../services/CombatHelperService');
 const MobTactics = require('./MobTactics');
-const eventBus = require('../../core/EventBus');
+const eventBus = require('../../src/core/EventBus');
 
 /**
  * CombatSkill - Autonomous combat, hostile mob hunting, bodyguard protection, and base patrol.

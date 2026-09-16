@@ -1,8 +1,8 @@
 const { WebSocketServer, WebSocket } = require('ws');
-const eventBus = require('../core/EventBus');
-const persistenceManager = require('../core/PersistenceManager');
-const authManager = require('../core/AuthManager');
-const { verifySessionToken } = require('../core/SessionAuth');
+const eventBus = require('../../../core/EventBus');
+const persistenceManager = require('../../../core/PersistenceManager');
+const authManager = require('../../../core/AuthManager');
+const { verifySessionToken } = require('../../../core/SessionAuth');
 
 /**
  * Broadcasts a JSON message payload to all actively connected WebSocket clients.
@@ -86,7 +86,7 @@ function setupWebSocketServer(httpServer, ctx) {
     }
 
     // Process incoming client commands (e.g. Dashboard Console input)
-    const DashboardCommandAdapter = require('../commands/adapters/DashboardCommandAdapter');
+    const DashboardCommandAdapter = require('../../commands/adapters/DashboardCommandAdapter');
     const dashboardAdapter = new DashboardCommandAdapter(ctx);
 
     ws.on('message', async (message) => {

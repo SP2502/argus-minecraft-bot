@@ -3,7 +3,7 @@ const spellCorrector = require('./SpellCorrector');
 const entityExtractor = require('./EntityExtractor');
 const intentRegistry = require('./IntentRegistry');
 const synonymRegistry = require('./SynonymRegistry');
-const nlpThresholds = require('../config/nlpThresholds');
+const nlpThresholds = require('../../../config/nlpThresholds');
 
 /**
  * IntentParser - Natural Language understanding parser mapping raw player input

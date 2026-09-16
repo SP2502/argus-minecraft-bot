@@ -1,10 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const UnifiedCommandGateway = require('../commands/UnifiedCommandGateway');
-const CommandPlanner = require('../commands/CommandPlanner');
-const intentParser = require('../nlp/IntentParser');
-const conversationContext = require('../commands/ConversationContextManager');
-const confirmationManager = require('../commands/ConfirmationManager');
+const UnifiedCommandGateway = require('../src/modules/commands/UnifiedCommandGateway');
+const CommandPlanner = require('../src/modules/commands/CommandPlanner');
+const intentParser = require('../src/modules/nlp/IntentParser');
+const conversationContext = require('../src/modules/commands/ConversationContextManager');
+const confirmationManager = require('../src/modules/commands/ConfirmationManager');
 
 test('Woodcutting Command - NLP Parsing, Planning, and Gateway Authorization', async () => {
   const queuedTasks = [];

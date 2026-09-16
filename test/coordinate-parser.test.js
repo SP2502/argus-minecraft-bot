@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const coordinateParser = require('../nlp/CoordinateParser');
+const coordinateParser = require('../src/modules/nlp/CoordinateParser');
 
 test('CoordinateParser - Absolute, 2D, and Relative', () => {
   // Labeled

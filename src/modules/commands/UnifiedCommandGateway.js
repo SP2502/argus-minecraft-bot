@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
-const commandPolicies = require('../config/commandPolicies');
+const commandPolicies = require('../../../config/commandPolicies');
 const CommandResponse = require('./CommandResponse');
-const CommandAudit = require('../models/CommandAudit');
-const Macro = require('../models/Macro');
-const eventBus = require('../core/EventBus');
-const Priorities = require('../config/priorities');
+const CommandAudit = require('../../../models/CommandAudit');
+const Macro = require('../../../models/Macro');
+const eventBus = require('../../core/EventBus');
+const Priorities = require('../../../config/priorities');
 
 /**
  * UnifiedCommandGateway - The SINGLE architectural entry point for all command execution

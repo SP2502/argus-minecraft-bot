@@ -1,8 +1,8 @@
 const Permission = require('../models/Permission');
 const AuditLog = require('../models/AuditLog');
 const { PermissionLevels: Roles } = require('../config/constants');
-const eventBus = require('../core/EventBus');
-const persistenceManager = require('../core/PersistenceManager');
+const eventBus = require('../src/core/EventBus');
+const persistenceManager = require('../src/core/PersistenceManager');
 
 // Numeric permission tier weights
 const PermissionTiers = Object.freeze({

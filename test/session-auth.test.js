@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createSessionToken, verifySessionToken, extractBearerToken } = require('../core/SessionAuth');
+const { createSessionToken, verifySessionToken, extractBearerToken } = require('../src/core/SessionAuth');
 
 test('SessionAuth creates and verifies signed dashboard sessions', () => {
   const originalPassword = process.env.DASHBOARD_PASSWORD;

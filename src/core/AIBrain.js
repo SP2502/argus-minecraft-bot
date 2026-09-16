@@ -1,5 +1,5 @@
-const Priorities = require('../config/priorities');
-const TickRates = require('../config/tickRates');
+const Priorities = require('../../config/priorities');
+const TickRates = require('../../config/tickRates');
 
 /**
  * AIBrain - Autonomous cognitive decision engine, adaptive tick scheduler, and system health monitor.

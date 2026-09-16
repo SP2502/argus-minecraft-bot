@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const confirmationManager = require('../commands/ConfirmationManager');
+const confirmationManager = require('../src/modules/commands/ConfirmationManager');
 
 test('ConfirmationManager - Sender Bound Confirmation Flow', () => {
   const requestUserA = {

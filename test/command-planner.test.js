@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const CommandPlanner = require('../commands/CommandPlanner');
-const intentParser = require('../nlp/IntentParser');
+const CommandPlanner = require('../src/modules/commands/CommandPlanner');
+const intentParser = require('../src/modules/nlp/IntentParser');
 
 test('CommandPlanner - Single and Compound Sequential Plans', async () => {
   // Mock context

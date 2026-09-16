@@ -1,28 +1,28 @@
 const eventBus = require('./EventBus');
-const NavigationService = require('../services/NavigationService');
-const TargetFinderService = require('../services/TargetFinderService');
-const InventoryService = require('../services/InventoryService');
-const ActionQueueService = require('../services/ActionQueueService');
-const SafetyService = require('../services/SafetyService');
-const ToolService = require('../services/ToolService');
-const CraftingService = require('../services/CraftingService');
-const LocationRegistry = require('../services/LocationRegistry');
-const CombatHelperService = require('../services/CombatHelperService');
-const LogisticsService = require('../services/LogisticsService');
-const AmbientBehaviorService = require('../services/AmbientBehaviorService');
-const HumanoidBehaviorService = require('../services/HumanoidBehaviorService');
+const NavigationService = require('../../services/NavigationService');
+const TargetFinderService = require('../../services/TargetFinderService');
+const InventoryService = require('../../services/InventoryService');
+const ActionQueueService = require('../../services/ActionQueueService');
+const SafetyService = require('../../services/SafetyService');
+const ToolService = require('../../services/ToolService');
+const CraftingService = require('../../services/CraftingService');
+const LocationRegistry = require('../../services/LocationRegistry');
+const CombatHelperService = require('../../services/CombatHelperService');
+const LogisticsService = require('../../services/LogisticsService');
+const AmbientBehaviorService = require('../../services/AmbientBehaviorService');
+const HumanoidBehaviorService = require('../../services/HumanoidBehaviorService');
 const SkillRegistry = require('./SkillRegistry');
 const { TaskManager } = require('./TaskManager');
-const { PermissionManager } = require('../security/PermissionManager');
-const MessageRouter = require('../communication/MessageRouter');
-const WebhookDispatcher = require('../communication/WebhookDispatcher');
+const { PermissionManager } = require('../../security/PermissionManager');
+const MessageRouter = require('../shared/communication/MessageRouter');
+const WebhookDispatcher = require('../shared/communication/WebhookDispatcher');
 
 // Unified Command & NLP Subsystem
-const conversationContext = require('../commands/ConversationContextManager');
-const confirmations = require('../commands/ConfirmationManager');
-const intentParser = require('../nlp/IntentParser');
-const CommandPlanner = require('../commands/CommandPlanner');
-const UnifiedCommandGateway = require('../commands/UnifiedCommandGateway');
+const conversationContext = require('../modules/commands/ConversationContextManager');
+const confirmations = require('../modules/commands/ConfirmationManager');
+const intentParser = require('../modules/nlp/IntentParser');
+const CommandPlanner = require('../modules/commands/CommandPlanner');
+const UnifiedCommandGateway = require('../modules/commands/UnifiedCommandGateway');
 
 /**
  * BotContext - Dependency Injection Container

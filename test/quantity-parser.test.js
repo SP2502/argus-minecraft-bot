@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const quantityParser = require('../nlp/QuantityParser');
+const quantityParser = require('../src/modules/nlp/QuantityParser');
 
 test('QuantityParser - Numeric and Word Parsing', () => {
   // Plain numbers

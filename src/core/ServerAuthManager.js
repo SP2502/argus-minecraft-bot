@@ -83,7 +83,7 @@ class ServerAuthManager {
     try {
       const mongoose = require('mongoose');
       if (mongoose.connection && mongoose.connection.readyState === 1) {
-        const ServerPassword = require('../models/ServerPassword');
+        const ServerPassword = require('../../models/ServerPassword');
         for (const val of this.memoryCache.values()) {
           await ServerPassword.findOneAndUpdate(
             { serverKey: val.serverKey },
@@ -137,7 +137,7 @@ class ServerAuthManager {
     try {
       const mongoose = require('mongoose');
       if (mongoose.connection && mongoose.connection.readyState === 1) {
-        const ServerPassword = require('../models/ServerPassword');
+        const ServerPassword = require('../../models/ServerPassword');
         const doc = await ServerPassword.findOne({ serverKey: key }).lean();
         if (doc) {
           this.memoryCache.set(key, doc);
@@ -220,7 +220,7 @@ class ServerAuthManager {
       try {
         const mongoose = require('mongoose');
         if (mongoose.connection && mongoose.connection.readyState === 1) {
-          const ServerPassword = require('../models/ServerPassword');
+          const ServerPassword = require('../../models/ServerPassword');
           await ServerPassword.deleteOne({ serverKey });
         }
       } catch (e) {}

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const spellCorrector = require('../nlp/SpellCorrector');
+const spellCorrector = require('../src/modules/nlp/SpellCorrector');
 
 test('SpellCorrector - Typo Detection and Auto-Correction', () => {
   // Exact similarity

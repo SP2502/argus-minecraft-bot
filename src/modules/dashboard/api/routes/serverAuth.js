@@ -1,5 +1,5 @@
 const express = require('express');
-const serverAuthManager = require('../../core/ServerAuthManager');
+const serverAuthManager = require('../../../../core/ServerAuthManager');
 
 /**
  * Creates REST API router for fetching and managing offline server passwords.

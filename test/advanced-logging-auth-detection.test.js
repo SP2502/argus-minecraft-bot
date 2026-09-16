@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const serverAuthManager = require('../core/ServerAuthManager');
+const serverAuthManager = require('../src/core/ServerAuthManager');
 const { PermissionManager, PermissionTiers } = require('../security/PermissionManager');
-const logger = require('../core/Logger');
+const logger = require('../src/core/Logger');
 
 test('Dynamic Owner Configuration & Elimination of Hardcoded Names', async (t) => {
   await t.test('PermissionManager strictly uses configured owner and rejects arbitrary ShadowPace without config', async () => {
