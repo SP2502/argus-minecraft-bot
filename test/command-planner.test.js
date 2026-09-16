@@ -7,13 +7,14 @@ const CommandPlanner = require('../src/modules/commands/CommandPlanner');
 const intentParser = require('../src/modules/nlp/IntentParser');
 const intentRegistry = require('../src/modules/nlp/IntentRegistry');
 const { IntentRegistry } = intentRegistry;
+require('../src/modules/mining');
 
 test('CommandPlanner - Single and Compound Sequential Plans', async () => {
   // --- Milestone 2A: Modular Intent Registration Invariant Verification ---
   // 1. Central intent files load into the global registry
   const centralIntents = intentRegistry.getAllIntents();
   assert.ok(centralIntents.length > 0, 'Central intent files must load successfully');
-  assert.ok(intentRegistry.getIntent('mine'), 'Central "mine" intent must be registered');
+  assert.ok(intentRegistry.getIntent('help'), 'Central "help" intent must be registered');
 
   // 2. Feature-local intent loading into an isolated registry instance
   const isolatedRegistry = new IntentRegistry({ autoLoadBuiltins: false });

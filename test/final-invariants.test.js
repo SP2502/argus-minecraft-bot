@@ -185,7 +185,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('Mining - Water Bucket Slot-6 Guard & Safe Digging Invariants', async (t) => {
-    const MineSkill = require('../skills/mining/MineSkill');
+    const { MineSkill } = require('../src/modules/mining');
 
     // Bot missing water bucket
     const mockContextNoWater = {

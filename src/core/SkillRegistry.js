@@ -4,7 +4,7 @@
 
 // Skill mapping table
 const registry = {
-  mine: require('../../skills/mining/MineSkill'),
+  mine: require('../modules/mining').MineSkill,
   farm: require('../../skills/farming/FarmSkill'),
   chop_tree: require('../../skills/woodcutting/ChopTreeSkill'),
   combat: require('../modules/combat').CombatSkill,

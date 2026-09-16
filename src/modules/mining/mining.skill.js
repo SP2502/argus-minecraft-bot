@@ -1,5 +1,5 @@
-const { BaseSkill, SkillAbort } = require('../BaseSkill');
-const oreData = require('./oreData');
+const { BaseSkill, SkillAbort } = require('../../../skills/BaseSkill');
+const oreData = require('./mining.data');
 
 /**
  * MineSkill - Autonomous ore prospecting, branch-mining, and resource harvesting.
