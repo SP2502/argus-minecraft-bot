@@ -37,13 +37,16 @@ test('Final Invariants & Regression Test Suite', async (t) => {
 
   await t.test('Security - Non-owner command rate limit (10 per minute)', async (t) => {
     const pm = new PermissionManager();
+    const ownerName = pm.ownerUsername || 'TestOwner';
+    pm.ownerUsername = ownerName;
+
     for (let i = 0; i < 10; i++) {
       assert.strictEqual(pm.checkRateLimit('spammy'), true, `Attempt ${i+1} allowed`);
     }
     assert.strictEqual(pm.checkRateLimit('spammy'), false, 'Attempt 11 blocked');
     
     for (let i = 0; i < 15; i++) {
-      assert.strictEqual(pm.checkRateLimit('ShadowPace'), true, 'Owner is exempt from rate limit');
+      assert.strictEqual(pm.checkRateLimit(ownerName), true, 'Owner is exempt from rate limit');
     }
   });
 

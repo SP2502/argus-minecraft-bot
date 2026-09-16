@@ -1,23 +1,14 @@
-# Dependencies
 node_modules/
-
-# Environment and Secrets
 .env
 .env.local
 .env.*.local
-
-# Persistent Runtime Data and Logs
 data/
 logs/*.log
 !logs/.gitkeep
 *.tmp
 *.bak
-
-# Build and Release Archives
 *.zip
 *.tar.gz
-
-# System and Editor
 .DS_Store
 *.swp
 *.swo

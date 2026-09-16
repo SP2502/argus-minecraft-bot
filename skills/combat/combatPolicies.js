@@ -1,11 +1,14 @@
 const combatData = require('./combatData');
 const combatConfig = require('../../config/combatConfig');
+const MobTactics = require('./MobTactics');
 
 /**
  * Pure combat decision policies and threat evaluations.
  * Contains no Mineflayer bot or network calls.
  */
 module.exports = {
+  MobTactics,
+
   /**
    * Evaluates whether an entity is a hostile target.
    * @param {Object} entity
@@ -54,42 +57,10 @@ module.exports = {
    * Determines the optimal tactical maneuver given the target entity and current bot status.
    * @param {Object} entity - Target entity
    * @param {Object} botStatus - { health, food, position, hasShield }
-   * @returns {'tactical_retreat'|'kite_creeper'|'shield_block'|'melee_rush'}
+   * @returns {string} Tactical action identifier
    */
   getTacticalAction(entity, botStatus = {}) {
-    const health = botStatus.health !== undefined ? botStatus.health : 20;
-
-    // 1. Critical health retreat
-    if (health <= combatConfig.RETREAT_HEALTH_THRESHOLD) {
-      return 'tactical_retreat';
-    }
-
-    if (!entity || !entity.position || !botStatus.position) {
-      return 'melee_rush';
-    }
-
-    const dx = entity.position.x - botStatus.position.x;
-    const dy = entity.position.y - botStatus.position.y;
-    const dz = entity.position.z - botStatus.position.z;
-    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    const mobName = (entity.name || '').toLowerCase();
-
-    // 2. Creeper detonation avoidance
-    if (mobName === 'creeper') {
-      if (distance < combatConfig.CREEPER_KITE_DISTANCE) {
-        return 'kite_creeper';
-      }
-    }
-
-    // 3. Ranged projectile defense
-    if (['skeleton', 'stray', 'pillager'].includes(mobName)) {
-      if (distance > 5 && botStatus.hasShield) {
-        return 'shield_block';
-      }
-    }
-
-    // 4. Standard melee engagement
-    return 'melee_rush';
+    return MobTactics.getTacticalAction(entity, botStatus);
   },
 
   /**

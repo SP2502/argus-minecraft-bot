@@ -17,7 +17,7 @@
 
 ## Archive Verification
 - **Archive File**: `ARGUS_FINAL_RELEASE_1.0.0_2026-09-05.zip`
-- **SHA-256 Checksum**: `8a89ea645f2e1f84e05cdfdb559fe1b9819a43102817f503380024fd68ef181c`
+- **SHA-256 Checksum**: `1ff23056cc2ee072d7e58c1377e4279674e352b9012e768749b87f6502d9c889`
 - **License**: `MIT License`
 
 ## Core Safety Invariants Verified

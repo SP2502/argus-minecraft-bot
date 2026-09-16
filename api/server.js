@@ -1,11 +1,11 @@
 const http = require('http');
 const path = require('path');
-const crypto = require('crypto');
 const express = require('express');
 const createStatusRouter = require('./routes/status');
 const { createRestCommandRouter } = require('../commands/adapters/RestCommandAdapter');
 const { setupWebSocketServer } = require('./websocket');
 const CommandAudit = require('../models/CommandAudit');
+const { createSessionToken, verifySessionToken, extractBearerToken, validateConfig } = require('../core/SessionAuth');
 
 /**
  * Creates and starts Express HTTP and WebSocket API server.
@@ -14,27 +14,17 @@ const CommandAudit = require('../models/CommandAudit');
  * @returns {{ app: express.Application, server: http.Server, wss: import('ws').WebSocketServer }}
  */
 function startServer(ctx, port = process.env.PORT || 3000) {
+  validateConfig();
   const app = express();
   app.use(express.json());
 
   // Serve static assets from public/
   app.use(express.static(path.join(__dirname, '../public')));
 
-  // 1. Mount API status and telemetry routes
-  const statusRouter = createStatusRouter(ctx);
-  app.use('/api', statusRouter);
-
-  // 2. Mount REST Command & Task Router
-  if (ctx) {
-    const restCommandRouter = createRestCommandRouter(ctx);
-    app.use('/api', restCommandRouter);
-  }
-
-  // 3. Dashboard Authentication Endpoint: POST /api/auth/login
+  // Dashboard authentication endpoint. All other API routes require its signed session.
   app.post('/api/auth/login', (req, res) => {
-    const { password, username } = req.body;
-    const configuredPassword = process.env.DASHBOARD_PASSWORD || 'admin';
-    const secret = process.env.DASHBOARD_SESSION_SECRET || 'secret_argus_key_2026';
+    const { password } = req.body;
+    const configuredPassword = process.env.DASHBOARD_PASSWORD;
 
     if (password !== configuredPassword) {
       return res.status(401).json({
@@ -43,22 +33,39 @@ function startServer(ctx, port = process.env.PORT || 3000) {
       });
     }
 
-    const user = username || process.env.OWNER_USERNAME || 'DashboardOwner';
-    const role = process.env.DASHBOARD_DEFAULT_ROLE || 'owner';
-    const expiresAt = Date.now() + Number(process.env.DASHBOARD_SESSION_TTL_MS || 28800000);
-
-    const tokenPayload = `${user}:${role}:${expiresAt}`;
-    const signature = crypto.createHmac('sha256', secret).update(tokenPayload).digest('hex');
-    const sessionToken = `${Buffer.from(tokenPayload).toString('base64')}.${signature}`;
+    const user = process.env.OWNER_USERNAME || 'DashboardOwner';
+    const role = 'owner';
+    const sessionToken = createSessionToken(user, role);
+    const session = verifySessionToken(sessionToken);
 
     return res.json({
       ok: true,
       token: sessionToken,
       username: user,
       role,
-      expiresAt
+      expiresAt: session.expiresAt
     });
   });
+
+  app.use('/api', (req, res, next) => {
+    if (req.path === '/health') return next();
+    const session = verifySessionToken(extractBearerToken(req.headers));
+    if (!session) return res.status(401).json({ ok: false, message: 'Authentication required.' });
+    req.auth = session;
+    next();
+  });
+
+  const statusRouter = createStatusRouter(ctx);
+  app.use('/api', statusRouter);
+
+  const createServerAuthRouter = require('./routes/serverAuth');
+  const serverAuthRouter = createServerAuthRouter();
+  app.use('/api/auth', serverAuthRouter);
+
+  if (ctx) {
+    const restCommandRouter = createRestCommandRouter(ctx);
+    app.use('/api', restCommandRouter);
+  }
 
   // 4. Command Audit History: GET /api/commands/history?limit=50
   app.get('/api/commands/history', async (req, res) => {
@@ -78,6 +85,17 @@ function startServer(ctx, port = process.env.PORT || 3000) {
 
   const server = http.createServer(app);
   const wss = setupWebSocketServer(server, ctx);
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      const nextPort = Number(port) + 1;
+      console.warn(`[API Server] Port ${port} is already in use. Retrying on port ${nextPort}...`);
+      port = nextPort;
+      server.listen(port);
+    } else {
+      console.error('[API Server] Server error:', err.message);
+    }
+  });
 
   server.listen(port, () => {
     console.log(`[API Server] Real-Time Dashboard & REST Gateway listening on port ${port}`);

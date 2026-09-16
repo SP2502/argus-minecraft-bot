@@ -6,9 +6,17 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
+  setToken(token) {
+    this.token = token;
+  }
+
+  get headers() {
+    return this.token ? { Authorization: `Bearer ${this.token}` } : {};
+  }
+
   async get(endpoint) {
     try {
-      const res = await fetch(`${this.baseUrl}${endpoint}`);
+      const res = await fetch(`${this.baseUrl}${endpoint}`, { headers: this.headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       return await res.json();
     } catch (err) {
@@ -21,7 +29,7 @@ class ApiClient {
     try {
       const res = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.headers },
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);

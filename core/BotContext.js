@@ -10,6 +10,7 @@ const LocationRegistry = require('../services/LocationRegistry');
 const CombatHelperService = require('../services/CombatHelperService');
 const LogisticsService = require('../services/LogisticsService');
 const AmbientBehaviorService = require('../services/AmbientBehaviorService');
+const HumanoidBehaviorService = require('../services/HumanoidBehaviorService');
 const SkillRegistry = require('./SkillRegistry');
 const { TaskManager } = require('./TaskManager');
 const { PermissionManager } = require('../security/PermissionManager');
@@ -53,12 +54,14 @@ class BotContext {
     this.combat = new CombatHelperService(bot, this);
     this.logistics = new LogisticsService(bot, this);
     this.ambient = new AmbientBehaviorService(bot, this);
+    this.humanoid = new HumanoidBehaviorService(bot, this);
 
     // 2. Infrastructure, Security, & Communication
     this.webhooks = new WebhookDispatcher();
     this.messageRouter = new MessageRouter(bot, process.env.OWNER_USERNAME, this.webhooks);
     this.permissionManager = new PermissionManager();
     this.permissions = this.permissionManager; // Alias
+    this.serverAuth = require('./ServerAuthManager');
     this.taskManager = new TaskManager(this);
 
     // 3. Natural Language Understanding & Unified Command Gateway

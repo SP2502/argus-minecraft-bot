@@ -10,7 +10,8 @@ const registry = {
   combat: require('../skills/combat/CombatSkill'),
   craft: require('../skills/crafting/CraftSkill'),
   build: require('../skills/building/BuildSkill'),
-  logistics: require('../skills/logistics/LogisticsSkill')
+  logistics: require('../skills/logistics/LogisticsSkill'),
+  navigation: require('../skills/navigation/NavigationSkill')
 };
 
 /**

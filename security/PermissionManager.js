@@ -28,17 +28,21 @@ const RoleToTier = {
  */
 class PermissionManager {
   constructor() {
-    this.ownerUsername = process.env.OWNER_USERNAME || 'ShadowPace';
+    this.ownerUsername = (process.env.OWNER_USERNAME || '').trim();
     this.rateLimitMap = new Map(); // username -> array of timestamps in last 60s
     this.failedAttemptsMap = new Map(); // username -> array of timestamps in last 5m
     this.tempBlockedUsers = new Map(); // username -> unblockTimestamp
+    this.localPermissions = new Map(); // username -> role string
 
     // Start auto-expiration timer (every 60 seconds)
     this.expirationTimer = setInterval(() => {
       this.checkExpirations().catch((err) => {
-        console.warn('[PermissionManager] Expiration check warning:', err.message);
+        // Silently catch background expiration errors
       });
     }, 60000);
+    if (this.expirationTimer && typeof this.expirationTimer.unref === 'function') {
+      this.expirationTimer.unref();
+    }
   }
 
   /**
@@ -47,16 +51,13 @@ class PermissionManager {
    * @param {string} username - Minecraft username
    * @param {number|string} requiredLevel - Required numeric tier (0-4) or Role name
    * @returns {Promise<boolean>}
-   * 
-   * @example
-   * const allowed = await permissionManager.hasPermission('Player1', PermissionTiers.TRUSTED);
    */
   async hasPermission(username, requiredLevel = PermissionTiers.GUEST) {
     if (!username) return false;
 
-    // 1. Owner always has absolute bypass authorization (ShadowPace is canonical immutable owner)
+    // 1. Owner always has absolute bypass authorization
     const lower = username.toLowerCase();
-    if (lower === this.ownerUsername.toLowerCase() || lower === 'shadowpace') {
+    if (this.ownerUsername && lower === this.ownerUsername.toLowerCase()) {
       return true;
     }
 
@@ -72,10 +73,17 @@ class PermissionManager {
       ? (RoleToTier[requiredLevel] !== undefined ? RoleToTier[requiredLevel] : PermissionTiers.GUEST)
       : requiredLevel;
 
+    // 3. If MongoDB is offline, use local in-memory permissions with instant lookup
+    const mongoose = require('mongoose');
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      const role = this.localPermissions.get(lower) || Roles.GUEST;
+      const userTier = RoleToTier[role] !== undefined ? RoleToTier[role] : PermissionTiers.GUEST;
+      return userTier >= targetTier && userTier > PermissionTiers.BLOCKED;
+    }
+
     try {
-      const doc = await Permission.findOne({ username: username.toLowerCase() });
+      const doc = await Permission.findOne({ username: lower });
       if (!doc) {
-        // Default unregistered user is GUEST (Tier 1)
         return PermissionTiers.GUEST >= targetTier;
       }
 
@@ -93,8 +101,9 @@ class PermissionManager {
 
       return userTier >= targetTier && userTier > PermissionTiers.BLOCKED;
     } catch (err) {
-      console.warn(`[PermissionManager] Database query failed for '${username}', falling back to safe guest check:`, err.message);
-      return PermissionTiers.GUEST >= targetTier;
+      const role = this.localPermissions.get(lower) || Roles.GUEST;
+      const userTier = RoleToTier[role] !== undefined ? RoleToTier[role] : PermissionTiers.GUEST;
+      return userTier >= targetTier && userTier > PermissionTiers.BLOCKED;
     }
   }
 
@@ -109,12 +118,24 @@ class PermissionManager {
    */
   async grant(username, role, grantedBy, durationMs = null) {
     const lower = (username || '').toLowerCase();
-    if (lower === this.ownerUsername.toLowerCase() || lower === 'shadowpace') {
+    if (this.ownerUsername && lower === this.ownerUsername.toLowerCase()) {
       eventBus.emit('log:entry', { severity: 'WARN', category: 'SECURITY', message: 'Attempted to modify owner privileges blocked.' });
       return null;
     }
     const normalizedUser = username.toLowerCase();
     const expiresAt = durationMs ? new Date(Date.now() + durationMs) : null;
+    this.localPermissions.set(normalizedUser, role);
+
+    const mongoose = require('mongoose');
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      eventBus.emit('permission.granted', { username, role, grantedBy, expiresAt });
+      eventBus.emit('log:entry', {
+        severity: 'INFO',
+        category: 'SECURITY',
+        message: `Granted role '${role}' to ${username} by ${grantedBy}${durationMs ? ` (Expires in ${Math.round(durationMs / 60000)}m)` : ''}`
+      });
+      return { username: normalizedUser, permissionLevel: role, grantedBy, grantedAt: new Date(), expiresAt };
+    }
 
     try {
       const doc = await Permission.findOneAndUpdate(
@@ -235,7 +256,7 @@ class PermissionManager {
   checkRateLimit(username) {
     if (!username) return true;
     const lower = username.toLowerCase();
-    if (lower === this.ownerUsername.toLowerCase() || lower === 'shadowpace') {
+    if (this.ownerUsername && lower === this.ownerUsername.toLowerCase()) {
       return true; // Owner is exempt from rate limiting
     }
 

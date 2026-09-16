@@ -352,18 +352,43 @@ class UnifiedCommandGateway {
     switch (op.intentName) {
       case 'status':
         return CommandResponse.info(
-          `Status: Health=${this.ctx.bot.health || 20}/20, Food=${this.ctx.bot.food || 20}/20, Task=${this.taskManager.activeTask ? this.taskManager.activeTask.skillName : 'Idle'}`
+          `Status: Health=${Math.round(this.ctx.bot.health || 20)}/20, Food=${Math.round(this.ctx.bot.food || 20)}/20, Pos=(${this.ctx.bot.entity ? Math.round(this.ctx.bot.entity.position.x) : '?'}, ${this.ctx.bot.entity ? Math.round(this.ctx.bot.entity.position.y) : '?'}, ${this.ctx.bot.entity ? Math.round(this.ctx.bot.entity.position.z) : '?'}), Task=${this.taskManager.activeTask ? this.taskManager.activeTask.skillName : 'Idle'}`
+        );
+
+      case 'where_are_you':
+      case 'coords':
+        if (this.ctx.bot && this.ctx.bot.entity) {
+          const p = this.ctx.bot.entity.position;
+          return CommandResponse.info(
+            `Coordinates: X=${Math.round(p.x)}, Y=${Math.round(p.y)}, Z=${Math.round(p.z)} in ${this.ctx.bot.game ? this.ctx.bot.game.dimension : 'overworld'}.`
+          );
+        }
+        return CommandResponse.info('Position currently undetermined.');
+
+      case 'health_status':
+        return CommandResponse.info(
+          `Health: ${Math.round(this.ctx.bot.health || 20)}/20, Food: ${Math.round(this.ctx.bot.food || 20)}/20.`
+        );
+
+      case 'uptime':
+        return CommandResponse.info(
+          `Uptime: ${Math.round(process.uptime())}s. Host: ${process.env.MC_HOST || 'server'}:${process.env.MC_PORT || '25565'}.`
         );
 
       case 'help':
         return CommandResponse.info(
-          'Available commands: mine <ore>, farm <crop>, go to <location>, inventory, sort, status, stop, resume, grant @player <role>, run macro <name>.'
+          'Available commands: follow me, stop, guard, coords, status, inventory, mine <ore>, farm <crop>, go to <location>, sort.'
         );
 
       case 'stop':
       case 'pause':
-        this.taskManager.pause();
-        return CommandResponse.success('Task execution paused.');
+        if (this.ctx.nav) this.ctx.nav.stopFollowing();
+        this.taskManager.cancelAll(request.senderId);
+        return CommandResponse.success('Tasks stopped and bot is idling.');
+
+      case 'stop_following':
+        if (this.ctx.nav) this.ctx.nav.stopFollowing();
+        return CommandResponse.success('Stopped following.');
 
       case 'resume':
         this.taskManager.resume();

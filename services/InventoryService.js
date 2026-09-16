@@ -220,8 +220,29 @@ class InventoryService {
       if (this.bot.inventory.items().length <= targetUsedMax) {
         break;
       }
+
+      // Safeguard: Never drop vital tools, weapons, armor, or water bucket
+      const isProtectedTool = item.name.includes('sword') || item.name.includes('pickaxe') ||
+                              item.name.includes('axe') || item.name.includes('shovel') ||
+                              item.name.includes('hoe') || item.name === 'water_bucket' ||
+                              item.name === 'shield' || item.name === 'totem_of_undying';
+      if (isProtectedTool) continue;
+
+      // Invariant: 16-seed reservation threshold on item discards
+      const isSeedOrCrop = item.name.includes('seeds') || item.name === 'carrot' || item.name === 'potato';
+      let tossCount = item.count;
+      if (isSeedOrCrop) {
+        const totalCount = this.countItem(item.name);
+        const reserve = 16;
+        if (totalCount <= reserve) {
+          continue; // Retain all seeds if at or below reserve
+        }
+        tossCount = Math.min(item.count, totalCount - reserve);
+        if (tossCount <= 0) continue;
+      }
+
       try {
-        await this.bot.toss(item.type, null, item.count);
+        await this.bot.toss(item.type, null, tossCount);
         droppedCount++;
         // Small delay between drops
         await new Promise((r) => setTimeout(r, 150));

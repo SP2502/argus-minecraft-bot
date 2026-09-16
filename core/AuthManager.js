@@ -37,13 +37,26 @@ class AuthManager {
    * @returns {Object}
    */
   loadCredentials() {
+    let rawVersion = process.env.MC_VERSION || process.env.MINECRAFT_VERSION;
+    let version;
+    if (!rawVersion || rawVersion === 'auto' || rawVersion === 'false' || rawVersion.trim() === '') {
+      version = false; // Triggers Mineflayer auto-detection via server ping
+    } else {
+      version = rawVersion.trim();
+    }
+
+    const checkTimeoutInterval = process.env.CHECK_TIMEOUT_INTERVAL
+      ? parseInt(process.env.CHECK_TIMEOUT_INTERVAL, 10)
+      : 60000;
+
     return {
       username: process.env.MC_USERNAME || 'Argus',
       password: process.env.MC_PASSWORD || undefined,
       auth: this.authMode,
       host: process.env.MC_HOST || 'localhost',
       port: process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : 25565,
-      version: process.env.MC_VERSION || '1.20.1'
+      version: version,
+      checkTimeoutInterval: checkTimeoutInterval
     };
   }
 
@@ -60,10 +73,12 @@ class AuthManager {
       host: this.credentials.host,
       port: this.credentials.port,
       version: this.credentials.version,
+      checkTimeoutInterval: this.credentials.checkTimeoutInterval,
       ...overrideOptions
     };
 
-    console.log(`[AuthManager] Initializing connection with Auth Mode: '${this.authMode.toUpperCase()}' for user '${this.credentials.username}'`);
+    const versionDesc = this.credentials.version ? this.credentials.version : 'AUTO-DETECT (server ping)';
+    console.log(`[AuthManager] Initializing connection with Auth Mode: '${this.authMode.toUpperCase()}' for user '${this.credentials.username}' (Version: ${versionDesc}, Keep-Alive Timeout: ${baseOptions.checkTimeoutInterval}ms)`);
 
     // 1. Microsoft Account (Modern OAuth)
     if (this.authMode === 'microsoft') {

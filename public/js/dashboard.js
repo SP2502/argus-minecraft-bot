@@ -24,11 +24,31 @@ class DashboardController {
     this.components.logs = new LogViewer('logViewerContainer');
     this.components.command = new CommandInput('commandInputContainer', (cmd) => this.sendCommand(cmd));
 
+    if (!(await this.authenticate())) return;
+
     // Connect WebSocket
     this.connectWebSocket();
 
     // Initial REST sync
     await this.syncInitialState();
+  }
+
+  async authenticate() {
+    let token = sessionStorage.getItem('argus_session_token');
+    if (!token) {
+      const password = window.prompt('Enter the Argus dashboard password:');
+      if (!password) return false;
+      const result = await window.apiClient.post('/api/auth/login', { password });
+      if (!result || !result.ok || !result.token) {
+        window.alert('Dashboard authentication failed.');
+        return false;
+      }
+      token = result.token;
+      sessionStorage.setItem('argus_session_token', token);
+    }
+    this.sessionToken = token;
+    window.apiClient.setToken(token);
+    return true;
   }
 
   async syncInitialState() {
@@ -59,7 +79,7 @@ class DashboardController {
 
   connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
+    const wsUrl = `${protocol}//${window.location.host}/?token=${encodeURIComponent(this.sessionToken)}`;
 
     console.log(`[Dashboard] Connecting to WebSocket stream at ${wsUrl}...`);
     this.ws = new WebSocket(wsUrl);

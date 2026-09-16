@@ -37,6 +37,16 @@ class ToolService {
 
     try {
       await this.bot.equip(bestTool, 'hand');
+
+      // Emit warning event if equipped tool is at or below warning threshold (<=20%)
+      if (this.isWarning(bestTool) && this.ctx && this.ctx.events) {
+        this.ctx.events.emit('tool.durability_warning', {
+          tool: bestTool.name,
+          durabilityPercent: this.getDurabilityPercent(bestTool),
+          isCritical: this.isCritical(bestTool)
+        });
+      }
+
       return bestTool;
     } catch (err) {
       console.warn(`[ToolService] Failed to equip ${bestTool.name}:`, err.message);
@@ -70,16 +80,19 @@ class ToolService {
 
     // Score candidates based on material and enchantments
     let bestTool = null;
-    let highestScore = -1;
+    let highestScore = -1000;
 
     for (const item of candidateTools) {
       const material = this._extractMaterial(item.name);
       const enchants = this._extractEnchantments(item);
       const score = toolTiers.getEffectiveTier(material, enchants);
 
-      // Penalize tools that are on the verge of breaking (<5% durability)
+      // Invariant: Durability <= 5% triggers tool switching before destruction
+      // Severely penalize critically damaged tools (<=5%) so healthy tools are always preferred
       const durabilityPercent = this.getDurabilityPercent(item);
-      const durabilityPenalty = durabilityPercent < 5 ? 2.0 : 0;
+      const isCrit = durabilityPercent <= 5;
+      const isWarn = durabilityPercent <= 20;
+      const durabilityPenalty = isCrit ? 100.0 : (isWarn ? 0.5 : 0);
       const finalScore = score - durabilityPenalty;
 
       if (finalScore > highestScore) {

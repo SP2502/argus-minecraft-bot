@@ -48,6 +48,12 @@ class AIBrain {
     if (this.ctx.ambient) {
       this.registerModule('AmbientBehaviorService', () => this.ctx.ambient.ping());
     }
+    if (this.ctx.combat) {
+      this.registerModule('CombatHelperService', () => this.ctx.combat.ping());
+    }
+    if (this.ctx.humanoid) {
+      this.registerModule('HumanoidBehaviorService', () => this.ctx.humanoid.ping());
+    }
   }
 
   /**
@@ -187,6 +193,28 @@ class AIBrain {
       return;
     }
 
+    // 1.5. Proactive Threat Detection & Self-Defense
+    if (this.ctx.combat && typeof this.ctx.combat.getImmediateThreat === 'function') {
+      const threat = this.ctx.combat.getImmediateThreat(10);
+      if (threat) {
+        this.setTickRate('combat');
+        this.lastActiveTime = Date.now();
+        if (this.ctx.events) {
+          this.ctx.events.emit('log:entry', {
+            severity: 'WARN',
+            category: 'COMBAT',
+            message: `Hostile mob '${threat.name || 'unknown'}' detected within 10m. Engaging self-defense.`
+          });
+        }
+        try {
+          await this.ctx.combat.defendAgainst(threat);
+        } catch (combatErr) {
+          console.warn('[AIBrain] Error during combat defense:', combatErr.message);
+        }
+        return;
+      }
+    }
+
     // 2. Process Next Task via TaskManager
     if (this.ctx.taskManager) {
       const snapshot = this.ctx.taskManager.getQueueSnapshot();
@@ -212,6 +240,15 @@ class AIBrain {
     if (idleDuration > 15000) {
       if (this.ctx.events) {
         this.ctx.events.emit('ai.idle', { idleDurationMs: idleDuration });
+      }
+    }
+
+    // Evaluate Ultra-Realistic Humanoid Anti-Bot Mimicry
+    if (this.ctx.humanoid && typeof this.ctx.humanoid.evaluate === 'function') {
+      try {
+        await this.ctx.humanoid.evaluate(idleDuration);
+      } catch (humanoidErr) {
+        // Non-fatal animation error
       }
     }
 

@@ -27,6 +27,9 @@ class MessageRouter {
     this.batchFlushTimer = setInterval(() => {
       this.flushBatchBuffer();
     }, 30000);
+    if (this.batchFlushTimer && typeof this.batchFlushTimer.unref === 'function') {
+      this.batchFlushTimer.unref();
+    }
   }
 
   /**
@@ -182,10 +185,21 @@ class MessageRouter {
   handleSocialGreeting(username, message) {
     if (!message || !this.bot) return false;
     const lower = message.trim().toLowerCase();
+    const botName = (this.bot.username || process.env.MC_USERNAME || 'bot').toLowerCase();
 
-    const isMatch = greetings.patterns.some((pattern) => lower.includes(pattern));
+    const dynamicPatterns = [
+      `hi ${botName}`,
+      `hello ${botName}`,
+      `hey ${botName}`,
+      `status ${botName}`,
+      ...greetings.patterns
+    ];
+
+    const isMatch = dynamicPatterns.some((pattern) => lower.includes(pattern));
     if (isMatch) {
-      const reply = greetings.responses[Math.floor(Math.random() * greetings.responses.length)];
+      const rawReply = greetings.responses[Math.floor(Math.random() * greetings.responses.length)];
+      const botDisplayName = this.bot.username || process.env.MC_USERNAME || 'Assistant';
+      const reply = rawReply.replace(/Argus/g, botDisplayName);
       try {
         this.bot.chat(reply);
         return true;
@@ -208,6 +222,7 @@ class MessageRouter {
 
     const source = request.source || 'minecraft';
     const delivery = response.delivery || 'source_only';
+    const botDisplayName = (this.bot && this.bot.username) ? this.bot.username : (process.env.MC_USERNAME || 'Bot');
 
     // 1. Minecraft In-Game Chat Channel
     if (source === 'minecraft') {
@@ -219,7 +234,7 @@ class MessageRouter {
         }
       } else if (delivery === 'owner_whisper') {
         try {
-          this.bot.whisper(this.ownerUsername, `[Argus] ${response.message}`);
+          this.bot.whisper(this.ownerUsername, `[${botDisplayName}] ${response.message}`);
         } catch (e) {
           // ignore
         }

@@ -15,8 +15,16 @@ class StateStore {
    * @returns {Promise<boolean>} Resolves to true if connected, false otherwise
    */
   async connect(uri = process.env.MONGODB_URI) {
-    const mongoUri = uri || 'mongodb://localhost:27017/argus_bot';
+    if (!uri || !uri.trim()) {
+      this.isConnected = false;
+      mongoose.set('bufferCommands', false);
+      console.log('[StateStore] Operating in local offline persistence mode via PersistenceManager.');
+      return false;
+    }
+
+    const mongoUri = uri.trim();
     try {
+      mongoose.set('bufferCommands', false);
       mongoose.connection.on('connected', () => {
         this.isConnected = true;
         console.log('[StateStore] MongoDB connected successfully.');
@@ -33,12 +41,13 @@ class StateStore {
       });
 
       await mongoose.connect(mongoUri, {
-        serverSelectionTimeoutMS: 5000
+        serverSelectionTimeoutMS: 3000
       });
       this.isConnected = true;
       return true;
     } catch (error) {
       this.isConnected = false;
+      mongoose.set('bufferCommands', false);
       console.warn('[StateStore] MongoDB offline or unreachable. Operating in local JSON persistence mode via PersistenceManager.');
       return false;
     }

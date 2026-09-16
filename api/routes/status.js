@@ -234,6 +234,8 @@ function createStatusRouter(ctx) {
         }
       });
     }
+  });
+
   /**
    * GET /stats/ambient - Autonomous ambient behaviors and homestead stewardship status
    */

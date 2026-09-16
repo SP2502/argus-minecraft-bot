@@ -3,6 +3,7 @@ const combatData = require('./combatData');
 const combatPolicies = require('./combatPolicies');
 const combatConfig = require('../../config/combatConfig');
 const CombatHelperService = require('../../services/CombatHelperService');
+const MobTactics = require('./MobTactics');
 const eventBus = require('../../core/EventBus');
 
 /**
@@ -224,53 +225,12 @@ class CombatSkill extends BaseSkill {
         return false;
       }
 
-      if (tactics === 'kite_creeper') {
-        // Back up away from creeper
-        this._raiseShield();
-        if (this.bot.entity && targetEntity.position) {
-          const dx = this.bot.entity.position.x - targetEntity.position.x;
-          const dz = this.bot.entity.position.z - targetEntity.position.z;
-          const retreatPos = {
-            x: this.bot.entity.position.x + Math.sign(dx) * 4,
-            y: this.bot.entity.position.y,
-            z: this.bot.entity.position.z + Math.sign(dz) * 4
-          };
-          await this.ctx.nav.goTo(retreatPos, { range: 1, timeoutMs: 1500, allowBreak: false });
-        }
-        await new Promise((r) => setTimeout(r, 400));
-        continue;
-      }
+      // Execute mob-optimized tactical maneuver via MobTactics engine
+      await MobTactics.executeTactic(this.bot, this.ctx, targetEntity, tactics);
+      attackAttempts++;
 
-      if (tactics === 'shield_block') {
-        this._raiseShield();
-        await new Promise((r) => setTimeout(r, 800));
-        this._lowerShield();
-      }
-
-      // Melee Rush: Close distance and strike
-      this._lowerShield();
-      await this.combatHelper.equipBestWeapon();
-
-      if (this.bot.entity && targetEntity.position) {
-        const dist = this.bot.entity.position.distanceTo(targetEntity.position);
-
-        if (dist > combatConfig.MELEE_ENGAGE_DISTANCE) {
-          await this.ctx.nav.goTo(targetEntity.position, { range: 2, timeoutMs: 2000, allowBreak: false });
-        }
-
-        // Look at target and attack
-        if (typeof this.bot.lookAt === 'function') {
-          await this.bot.lookAt(targetEntity.position.offset(0, targetEntity.height ? targetEntity.height * 0.8 : 1, 0));
-        }
-
-        if (typeof this.bot.attack === 'function') {
-          this.bot.attack(targetEntity);
-          attackAttempts++;
-          eventBus.emit('combat.hit', { target: targetEntity.name, attempt: attackAttempts });
-        }
-
-        // Attack cooldown timing (Minecraft 1.9+)
-        await new Promise((r) => setTimeout(r, combatConfig.ATTACK_COOLDOWN_MS));
+      if (!targetEntity.isValid || (targetEntity.metadata && targetEntity.metadata[7] <= 0)) {
+        return true;
       }
     }
 

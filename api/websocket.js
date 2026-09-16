@@ -2,6 +2,7 @@ const { WebSocketServer, WebSocket } = require('ws');
 const eventBus = require('../core/EventBus');
 const persistenceManager = require('../core/PersistenceManager');
 const authManager = require('../core/AuthManager');
+const { verifySessionToken } = require('../core/SessionAuth');
 
 /**
  * Broadcasts a JSON message payload to all actively connected WebSocket clients.
@@ -25,10 +26,24 @@ function broadcast(wss, payload) {
  * @returns {WebSocketServer}
  */
 function setupWebSocketServer(httpServer, ctx) {
-  const wss = new WebSocketServer({ server: httpServer });
+  const wss = new WebSocketServer({ noServer: true });
+  httpServer.on('upgrade', (req, socket, head) => {
+    const requestUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const session = verifySessionToken(requestUrl.searchParams.get('token'));
+    if (!session) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req, session));
+  });
+
+  wss.on('error', (err) => {
+    console.warn('[WebSocketServer] WSS error:', err.message);
+  });
 
   // 1. Client connection handler
-  wss.on('connection', (ws, req) => {
+  wss.on('connection', (ws, req, session) => {
     const clientIp = req.socket.remoteAddress;
     console.log(`[WebSocket] Dashboard client connected from ${clientIp}`);
 
@@ -84,7 +99,7 @@ function setupWebSocketServer(httpServer, ctx) {
         }
 
         if ((parsed.type === 'dashboard.command' || parsed.type === 'chat.command') && parsed.message) {
-          await dashboardAdapter.handleCommand(ws, parsed, parsed.session || {});
+          await dashboardAdapter.handleCommand(ws, parsed, session);
         }
       } catch (err) {
         console.warn('[WebSocket] Error processing client message:', err.message);

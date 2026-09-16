@@ -21,19 +21,7 @@ function createRestCommandRouter(ctx) {
       });
     }
 
-    const apiKey = req.headers['x-api-key'];
-    const configuredKey = process.env.API_KEY || null;
-
-    // Optional API key validation
-    if (configuredKey && apiKey !== configuredKey) {
-      return res.status(401).json({
-        ok: false,
-        status: 'denied',
-        message: 'Invalid or missing X-API-Key header.'
-      });
-    }
-
-    const senderId = apiKey ? `api:${apiKey.substr(0, 6)}` : (process.env.OWNER_USERNAME || 'RestAdmin');
+    const senderId = req.auth.username;
 
     const request = {
       source: 'rest',
@@ -73,7 +61,7 @@ function createRestCommandRouter(ctx) {
     const taskId = req.params.id;
     const request = {
       source: 'rest',
-      senderId: process.env.OWNER_USERNAME || 'RestAdmin',
+      senderId: req.auth.username,
       message: `cancel task ${taskId}`,
       sessionId: `rest_${req.ip}`
     };
