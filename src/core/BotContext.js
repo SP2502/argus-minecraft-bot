@@ -1,12 +1,11 @@
 const eventBus = require('./EventBus');
-const NavigationService = require('../../services/NavigationService');
+const { NavigationService, LocationRegistry } = require('../modules/navigation');
 const TargetFinderService = require('../../services/TargetFinderService');
 const InventoryService = require('../../services/InventoryService');
 const ActionQueueService = require('../../services/ActionQueueService');
 const SafetyService = require('../../services/SafetyService');
 const ToolService = require('../../services/ToolService');
 const CraftingService = require('../../services/CraftingService');
-const LocationRegistry = require('../../services/LocationRegistry');
 const { CombatService: CombatHelperService } = require('../modules/combat');
 const { LogisticsService } = require('../modules/logistics');
 const AmbientBehaviorService = require('../../services/AmbientBehaviorService');

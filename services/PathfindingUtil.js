@@ -1,5 +1,5 @@
 const { Movements } = require('mineflayer-pathfinder');
-const MovementCosts = require('../config/movementCosts');
+const MovementCosts = require('../src/modules/navigation/movement-costs');
 
 /**
  * PathfindingUtil - Pure helper functions and movement configuration generators for NavigationService.

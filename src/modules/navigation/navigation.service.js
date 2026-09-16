@@ -1,6 +1,6 @@
 const { pathfinder, goals } = require('mineflayer-pathfinder');
-const { createSafeMovements, getStuckDetector } = require('./PathfindingUtil');
-const LocationRegistry = require('./LocationRegistry');
+const { createSafeMovements, getStuckDetector } = require('../../../services/PathfindingUtil');
+const LocationRegistry = require('./locations.repository');
 
 /**
  * ============================================================================

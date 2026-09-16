@@ -11,7 +11,7 @@ const registry = {
   craft: require('../../skills/crafting/CraftSkill'),
   build: require('../modules/building').BuildSkill,
   logistics: require('../modules/logistics').LogisticsSkill,
-  navigation: require('../../skills/navigation/NavigationSkill')
+  navigation: require('../modules/navigation').NavigationSkill
 };
 
 /**
