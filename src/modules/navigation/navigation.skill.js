@@ -1,4 +1,4 @@
-const { BaseSkill, SkillAbort, SkillSuspended } = require('../../../skills/BaseSkill');
+const { BaseSkill, SkillAbort, SkillSuspended } = require('../../core/base.skill');
 
 /**
  * NavigationSkill - Autonomous movement, waypoint travel, and player following.

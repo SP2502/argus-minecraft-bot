@@ -1,4 +1,4 @@
-const { BaseSkill } = require('../../../skills/BaseSkill');
+const { BaseSkill } = require('../../core/base.skill');
 const combatData = require('./combat.data');
 const combatPolicies = require('./combat.policy');
 const combatConfig = require('./combat.config');

@@ -1,4 +1,4 @@
-const { BaseSkill, SkillAbort } = require('../../../skills/BaseSkill');
+const { BaseSkill, SkillAbort } = require('../../core/base.skill');
 const buildingConfig = require('./building.config');
 const buildingData = require('./building.data');
 const schematics = require('./schematics');

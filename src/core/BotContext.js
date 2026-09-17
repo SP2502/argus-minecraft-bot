@@ -74,7 +74,7 @@ class BotContext {
   /**
    * Helper to load and instantiate a registered skill with this context.
    * @param {string} name - Skill name
-   * @returns {import('../skills/BaseSkill')}
+   * @returns {import('./base.skill')}
    */
   loadSkill(name) {
     return this.skills.loadSkill(name, this);

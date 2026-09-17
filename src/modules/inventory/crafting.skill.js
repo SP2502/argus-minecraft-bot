@@ -1,4 +1,4 @@
-const { BaseSkill } = require('../../../skills/BaseSkill');
+const { BaseSkill } = require('../../core/base.skill');
 const craftingData = require('./crafting.data');
 const eventBus = require('../../core/EventBus');
 

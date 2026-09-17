@@ -1,4 +1,4 @@
-const { BaseSkill } = require('../../../skills/BaseSkill');
+const { BaseSkill } = require('../../core/base.skill');
 const TreeAnalyzer = require('./tree-analyzer');
 const treeData = require('./forestry.data');
 const forestryPolicies = require('./forestry.policy');

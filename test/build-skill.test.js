@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { BuildSkill } = require('../src/modules/building');
-const { SkillAbort } = require('../skills/BaseSkill');
+const { SkillAbort } = require('../src/core/base.skill');
 
 test('BuildSkill - Autonomous Structure Construction and Event Emission', async () => {
   const inventoryItems = [

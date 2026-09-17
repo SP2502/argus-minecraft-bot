@@ -1,4 +1,4 @@
-const { BaseSkill } = require('./BaseSkill');
+const { BaseSkill } = require('./base.skill');
 
 /**
  * SkillTemplate - Reference archetype for authoring new skills in future phases.
@@ -9,7 +9,7 @@ const { BaseSkill } = require('./BaseSkill');
  */
 class SkillTemplate extends BaseSkill {
   /**
-   * @param {import('../core/BotContext')} ctx - BotContext container
+   * @param {import('./BotContext')} ctx - BotContext container
    */
   constructor(ctx) {
     super(ctx);

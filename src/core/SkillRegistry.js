@@ -17,7 +17,7 @@ const registry = {
 /**
  * Registers a new skill class under a unique name.
  * @param {string} name - Skill identifier
- * @param {typeof import('../skills/BaseSkill')} SkillClass - Skill constructor
+ * @param {typeof import('./base.skill')} SkillClass - Skill constructor
  */
 function registerSkill(name, SkillClass) {
   registry[name.toLowerCase()] = SkillClass;
@@ -27,7 +27,7 @@ function registerSkill(name, SkillClass) {
  * Instantiates a registered skill with the provided BotContext.
  * @param {string} name - Registered skill name
  * @param {import('./BotContext')} ctx - BotContext instance
- * @returns {import('../skills/BaseSkill')} Instantiated skill instance
+ * @returns {import('./base.skill')} Instantiated skill instance
  * @throws {Error} If skill is not registered
  */
 function loadSkill(name, ctx) {

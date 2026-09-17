@@ -1,4 +1,4 @@
-const nlpThresholds = require('../../../config/nlpThresholds');
+const nlpThresholds = require('./nlp-thresholds');
 const synonymRegistry = require('./SynonymRegistry');
 
 /**
