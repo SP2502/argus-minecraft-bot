@@ -1,6 +1,6 @@
 # Argus Event Bus Specification
 
-`core/EventBus.js` is the centralized, asynchronous pub/sub nervous system of Argus. It prevents tight coupling between high-level autonomous routines, API endpoints, WebSocket streamers, and hardware adapters.
+`src/core/EventBus.js` is the centralized, asynchronous pub/sub nervous system of Argus. It prevents tight coupling between high-level autonomous routines, API endpoints, WebSocket streamers, and hardware adapters.
 
 ## Core Event Catalog
 

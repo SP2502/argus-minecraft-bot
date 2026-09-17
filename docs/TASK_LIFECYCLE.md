@@ -1,6 +1,6 @@
 # Argus Task Lifecycle & Preemption Model
 
-The `core/TaskManager.js` engine schedules all bot activities using a priority-preemptive state machine.
+The `src/core/TaskManager.js` engine schedules all bot activities using a priority-preemptive state machine.
 
 ```
        [ USER / NLP / DASHBOARD / CRON ]

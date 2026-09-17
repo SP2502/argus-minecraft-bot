@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.19.4%2B-blue.svg)](https://minecraft.net/)
-[![Tests](https://img.shields.io/badge/Tests-60%2F60%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-104%2F104%20Passing-brightgreen.svg)]()
 
 Argus is a production-grade, event-driven autonomous Minecraft bot built on Node.js and Mineflayer. Engineered for long-term survival, base logistics, agricultural self-sustainment, tactical combat, procedural construction, and deep branch-mining, Argus operates reliably through in-game chat, an authenticated REST API, and a real-time WebGL 3D dashboard.
 

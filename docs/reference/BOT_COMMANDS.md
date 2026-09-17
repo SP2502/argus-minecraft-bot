@@ -6,7 +6,7 @@ This document provides the complete, authoritative manual of **every single comm
 
 ## 1. Command Execution Modalities
 
-Argus commands can be issued seamlessly across three distinct interfaces. Every interface routes through the central [UnifiedCommandGateway.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/commands/UnifiedCommandGateway.js) for unified role-based authorization, rate limiting, and execution:
+Argus commands can be issued seamlessly across three distinct interfaces. Every interface routes through the central [UnifiedCommandGateway.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/src/modules/commands/UnifiedCommandGateway.js) for unified role-based authorization, rate limiting, and execution:
 
 1. **In-Game Minecraft Chat**:
    Simply type natural-language sentences or direct keywords in public or private chat (e.g., `mine 32 iron then return home`).
@@ -24,7 +24,7 @@ Argus commands can be issued seamlessly across three distinct interfaces. Every 
 
 ## 2. Security Roles & Authorization Tiers
 
-Every command enforces a minimum permission tier evaluated by [PermissionManager.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/security/PermissionManager.js):
+Every command enforces a minimum permission tier evaluated by [permission.service.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/src/modules/security/permission.service.js):
 
 | Tier | Role | Description |
 | :---: | :--- | :--- |
@@ -278,7 +278,7 @@ drop all
 
 Spatial waypoint navigation, player tracking, and return-home routines.
 - **Resource Locks**: `movement`
-- Controlled exclusively by [NavigationService.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/services/NavigationService.js) with dynamic hazard avoidance.
+- Controlled exclusively by [navigation.service.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/src/modules/navigation/navigation.service.js) with dynamic hazard avoidance.
 
 | Intent | Min Role | Phrasing / Triggers | Parameters |
 | :--- | :---: | :--- | :--- |
@@ -302,7 +302,7 @@ retrace steps
 
 ### 4.11 Task Scheduler & Concurrency Control
 
-Direct control over [TaskManager.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/core/TaskManager.js) and active background skills.
+Direct control over [TaskManager.js](file:///c:/Users/kkpcs/Downloads/ArgusMain/src/core/TaskManager.js) and active background skills.
 
 | Intent | Min Role | Phrasing / Triggers | Description |
 | :--- | :---: | :--- | :--- |
