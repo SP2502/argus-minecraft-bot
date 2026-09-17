@@ -1,10 +1,10 @@
 const eventBus = require('./EventBus');
 const { NavigationService, LocationRegistry } = require('../modules/navigation');
-const TargetFinderService = require('../../services/TargetFinderService');
+const TargetFinderService = require('../shared/services/target-finder.service');
 const { InventoryService, CraftingService } = require('../modules/inventory');
-const ActionQueueService = require('../../services/ActionQueueService');
-const SafetyService = require('../../services/SafetyService');
-const ToolService = require('../../services/ToolService');
+const ActionQueueService = require('../shared/services/action-queue.service');
+const SafetyService = require('../shared/services/safety.service');
+const ToolService = require('../shared/services/tool.service');
 const { CombatService: CombatHelperService } = require('../modules/combat');
 const { LogisticsService } = require('../modules/logistics');
 const { AmbientBehaviorService, HumanoidBehaviorService } = require('../modules/behavior');

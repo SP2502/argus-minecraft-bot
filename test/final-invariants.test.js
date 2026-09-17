@@ -126,7 +126,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('Persistence - Checksum Verification & Corrupted State Recovery', async (t) => {
-    const pm = require('../src/core/PersistenceManager');
+    const pm = require('../src/shared/persistence/persistence-manager');
     const testFile = 'test_corrupted_state.json';
     const initialData = { botName: 'Argus', version: '1.0.0', seed: 12345 };
 
@@ -152,8 +152,8 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('Safety - Emergency Retreat on Critical Health (<3 Hearts)', async (t) => {
-    const SafetyService = require('../services/SafetyService');
-    const thresholds = require('../config/safetyThresholds');
+    const SafetyService = require('../src/shared/services/safety.service');
+    const thresholds = require('../src/shared/config/safety-thresholds');
     assert.strictEqual(thresholds.CRITICAL_HEALTH, 6, 'Critical health must be 6 (3 hearts)');
 
     const mockBotLow = { health: 5, food: 20, entity: { position: { x: 0, y: 64, z: 0 } } };
@@ -167,7 +167,7 @@ test('Final Invariants & Regression Test Suite', async (t) => {
   });
 
   await t.test('Tools - Durability Thresholds (20% Warning, 5% Critical)', async (t) => {
-    const ToolService = require('../services/ToolService');
+    const ToolService = require('../src/shared/services/tool.service');
     const mockBot = {
       registry: { items: { 1: { maxDurability: 100 } } },
       inventory: { items: () => [] }

@@ -2,15 +2,15 @@ require('dotenv').config();
 require('dotenv').config({ path: '.env.local', override: true });
 
 const authManager = require('./src/core/AuthManager');
-const persistenceManager = require('./src/core/PersistenceManager');
-const StateStore = require('./src/core/StateStore');
+const persistenceManager = require('./src/shared/persistence/persistence-manager');
+const StateStore = require('./src/shared/persistence/state-store');
 const BotContext = require('./src/core/BotContext');
 const AIBrain = require('./src/core/AIBrain');
 const { startServer } = require('./src/modules/dashboard/api/server');
 const eventBus = require('./src/core/EventBus');
 const MinecraftChatAdapter = require('./src/modules/commands/adapters/MinecraftChatAdapter');
 const { serverAuthManager } = require('./src/modules/server-auth');
-const logger = require('./src/core/Logger');
+const logger = require('./src/shared/observability/logger');
 
 let bot = null;
 let botContext = null;

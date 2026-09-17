@@ -1,4 +1,4 @@
-const defaultItemValues = require('../../../services/ItemValue');
+const defaultItemValues = require('./item-value');
 const itemCategories = require('./item-categories');
 const { openChest, moveItemsToChest, closeChest, getChestContents } = require('./chest-interaction');
 

@@ -1,4 +1,4 @@
-const toolTiers = require('../src/modules/inventory/tool-tiers');
+const toolTiers = require('../../modules/inventory/tool-tiers');
 
 /**
  * ToolService - Evaluates, scores, equips, and tracks durability of equipment and tools.

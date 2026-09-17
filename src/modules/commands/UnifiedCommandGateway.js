@@ -4,7 +4,7 @@ const CommandResponse = require('./CommandResponse');
 const CommandAudit = require('../security/command-audit.model');
 const Macro = require('./macro.model');
 const eventBus = require('../../core/EventBus');
-const Priorities = require('../../../config/priorities');
+const Priorities = require('../../shared/config/priorities');
 
 /**
  * UnifiedCommandGateway - The SINGLE architectural entry point for all command execution

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Location = require('./location.model');
 const { Chest } = require('../logistics');
-const { LocationTypes } = require('../../../config/constants');
+const { LocationTypes } = require('../../shared/config/constants');
 
 /**
  * LocationRegistry - Dual-Mode (MongoDB + Offline In-Memory) POI & Base Management.

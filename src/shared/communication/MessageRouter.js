@@ -1,6 +1,6 @@
 const eventBus = require('../../core/EventBus');
 const WebhookDispatcher = require('./WebhookDispatcher');
-const persistenceManager = require('../../core/PersistenceManager');
+const persistenceManager = require('../persistence/persistence-manager');
 const { greetings } = require('../../modules/behavior');
 
 /**

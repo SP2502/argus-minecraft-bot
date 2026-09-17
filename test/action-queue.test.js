@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const ActionQueueService = require('../services/ActionQueueService');
+const ActionQueueService = require('../src/shared/services/action-queue.service');
 
 test('ActionQueueService - Priority-Sorted Action Execution', async () => {
   const executionOrder = [];

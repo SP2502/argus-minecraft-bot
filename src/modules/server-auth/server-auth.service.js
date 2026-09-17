@@ -1,7 +1,7 @@
 const crypto = require('crypto');
-const persistenceManager = require('../../core/PersistenceManager');
+const persistenceManager = require('../../shared/persistence/persistence-manager');
 const eventBus = require('../../core/EventBus');
-const logger = require('../../core/Logger');
+const logger = require('../../shared/observability/logger');
 
 /**
  * ServerAuthManager - Manages in-game server authentication (AuthMe, LoginSecurity, nLogin, etc.).

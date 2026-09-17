@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const persistenceManager = require('./PersistenceManager');
+const persistenceManager = require('./persistence-manager');
 
 /**
  * StateStore - Manages MongoDB database connection lifecycle and local atomic state persistence.

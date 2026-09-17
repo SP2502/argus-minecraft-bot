@@ -1,4 +1,4 @@
-const safetyThresholds = require('../config/safetyThresholds');
+const safetyThresholds = require('../config/safety-thresholds');
 
 /**
  * SafetyService - Autonomous survival, hazard monitoring, damage tracking, and emergency retreat coordinator.

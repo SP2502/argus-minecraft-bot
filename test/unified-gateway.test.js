@@ -6,7 +6,7 @@ const intentParser = require('../src/modules/nlp/IntentParser');
 const conversationContext = require('../src/modules/commands/ConversationContextManager');
 const confirmationManager = require('../src/modules/commands/ConfirmationManager');
 const { TaskManager } = require('../src/core/TaskManager');
-const Priorities = require('../config/priorities');
+const Priorities = require('../src/shared/config/priorities');
 
 test('UnifiedCommandGateway - Authorization, Ambiguity, and Execution', async () => {
   const tasksEnqueued = [];

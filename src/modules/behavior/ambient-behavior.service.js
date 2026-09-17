@@ -1,5 +1,5 @@
 const ambientConfig = require('./ambient.config');
-const Priorities = require('../../../config/priorities');
+const Priorities = require('../../shared/config/priorities');
 
 /**
  * AmbientBehaviorService - Autonomous Homestead Stewardship, Day/Night Sleep Routine,

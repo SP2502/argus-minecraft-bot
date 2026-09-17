@@ -1,5 +1,5 @@
-const eventBus = require('./EventBus');
-const persistenceManager = require('./PersistenceManager');
+const eventBus = require('../../core/EventBus');
+const persistenceManager = require('../persistence/persistence-manager');
 
 // ANSI Color definitions for terminal output
 const COLORS = {

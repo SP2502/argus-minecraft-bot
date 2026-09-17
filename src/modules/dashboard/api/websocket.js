@@ -1,6 +1,6 @@
 const { WebSocketServer, WebSocket } = require('ws');
 const eventBus = require('../../../core/EventBus');
-const persistenceManager = require('../../../core/PersistenceManager');
+const persistenceManager = require('../../../shared/persistence/persistence-manager');
 const authManager = require('../../../core/AuthManager');
 const { verifySessionToken } = require('../session-auth');
 
