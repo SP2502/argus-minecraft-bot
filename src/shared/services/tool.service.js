@@ -12,6 +12,7 @@ class ToolService {
   constructor(bot, ctx = null) {
     this.bot = bot;
     this.ctx = ctx;
+
   }
 
   /**
