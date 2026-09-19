@@ -1,580 +1,176 @@
-# Argus (Beta)
+# Argus — Autonomous Event-Driven Minecraft Bot
 
-### An autonomous Minecraft Java Edition bot built around modular automation, persistent state, and self-directed behavior.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.19.4%2B-blue.svg)](https://minecraft.net/)
+[![Tests](https://img.shields.io/badge/Tests-104%2F104%20Passing-brightgreen.svg)]()
 
-Argus is an independent side project built with **Mineflayer**. I started it after finding existing open-source Minecraft bots too limited for the level of automation I wanted to experiment with.
-
-Instead of implementing a collection of isolated commands, I built Argus as a modular system where navigation, resource gathering, construction, combat, inventory management, task execution, persistence, and autonomous behavior work together.
-
-> **Status:** 🟢 Released — independent side project
-> **Edition:** Minecraft Java Edition
-> **Framework:** Mineflayer
-> **Author:** [Shreyansh Parganiha](https://github.com/SP2502)
+Argus is a production-grade, event-driven autonomous Minecraft bot built on Node.js and Mineflayer. Engineered for long-term survival, base logistics, agricultural self-sustainment, tactical combat, procedural construction, and deep branch-mining, Argus operates reliably through in-game chat, an authenticated REST API, and a real-time WebGL 3D dashboard.
 
 ---
 
-## 🧠 What Makes Argus Different?
-
-Argus is designed around a simple idea:
-
-> **The bot should be able to maintain its state, understand its situation, execute tasks, recover from problems, and decide what to do next.**
-
-The system combines:
-
-* Modular subsystems
-* Persistent state
-* Task queues
-* Natural-language commands
-* Autonomous needs assessment
-* Recovery mechanisms
-* Context-aware combat
-* Resource and inventory management
-* Remote monitoring and control
-
-The result is a bot that can move beyond individual commands and perform longer-running sequences of actions.
-
----
-
-# ✨ Core Capabilities
-
-## 🧭 Navigation
-
-Argus uses Mineflayer's pathfinding ecosystem with an additional navigation layer.
-
-**Capabilities include:**
-
-* A* pathfinding
-* Following players/entities
-* Coordinate-based navigation
-* Exploration
-* Return-to-home behavior
-* Stuck detection
-* Automatic unstuck strategies
-* Manual bridging
-* Scaffold-based climbing
-* Lava, fire, and magma avoidance
-* Runtime movement configuration
-
-The navigation system continuously checks whether the bot is actually progressing and can attempt recovery when movement becomes stuck.
-
----
-
-## ⛏️ Mining
-
-Mining is implemented as a dedicated subsystem rather than a single command.
-
-### Ore intelligence
-
-Argus maintains information about ores and their preferred mining depths, allowing the system to select appropriate Y-levels for targeted resources.
-
-### Mining modes
-
-* Vein mining
-* Strip mining
-* Cave mining
-* Tunnel mining
-* Targeted resource gathering
-
-### Safety
-
-Before digging, the system checks for hazards including:
-
-* Lava
-* Falling gravel/sand
-* Unsafe blocks below the bot
-* Insufficient lighting
-
-It can automatically place torches when lighting falls below the configured threshold.
-
-The mining system also monitors inventory capacity and can stop operations when the inventory becomes full.
-
----
-
-# 🌾 Farming & Food
-
-Argus contains a structured crop and animal system.
-
-### Crops
-
-The system models crop-specific information such as:
-
-* Growth stages
-* Maturity
-* Light requirements
-* Water requirements
-* Bonemeal eligibility
-* Harvest tools
-
-It supports crops including wheat, carrots, potatoes, beetroot, pumpkin, melon, sugar cane, cactus, bamboo, sweet berries, and Nether wart.
-
-### Automation
-
-* Automatic harvesting
-* Automatic replanting
-* Bonemeal-assisted growth
-* Tall-crop handling
-* Animal breeding
-* Sheep shearing
-* Cow milking
-* Food selection
-* Automatic eating
-* Furnace-based cooking
-
----
-
-# 🏗️ Building & Repair
-
-Argus can construct predefined structures and maintain existing structures.
-
-### Building
-
-The structure system supports templates for things such as:
-
-* Houses
-* Walls
-* Bridges
-* Farms
-* Towers
-* Shelters
-
-Before construction, Argus can check:
-
-* Ground stability
-* Lava/water proximity
-* Whether the build area is clear
-* Available building materials
-
-If the preferred material is unavailable, substitute-block logic can be used.
-
-### Automated repair
-
-Argus can scan its environment for structural damage, including:
-
-* Crater-like damage
-* Wall holes
-* Missing doors
-* Broken windows
-* Roof damage
-
-Detected damage can then trigger an automated repair routine.
-
----
-
-# ⚔️ Combat
-
-Combat is one of Argus's most detailed subsystems.
-
-Rather than treating every hostile entity identically, the bot maintains mob-specific behavior and equipment information.
-
-### Equipment intelligence
-
-Argus evaluates weapons and armor using properties such as:
-
-* Damage
-* Attack speed
-* DPS
-* Durability
-* Defense
-* Toughness
-* Knockback resistance
-
-It can automatically equip the best available equipment.
-
-### Mob-specific behavior
-
-Different entities can trigger different tactics.
-
-Examples include:
-
-* Skeleton → ranged kiting
-* Enderman → avoid eye contact
-* Blaze → ranged/flying combat
-* Ravager → kiting
-* Evoker → close-distance attack
-* Vex → flying combat
-* Warden → immediate retreat
-
-The combat system also includes:
-
-* Strafe movement
-* Critical-hit timing
-* Shield usage
-* Combat recovery
-* Low-health retreat
-* Combat statistics
-* Stuck-in-combat recovery
-
----
-
-## 🟢 Creeper Handling
-
-Creepers receive their own dedicated combat behavior.
-
-Argus can:
-
-* Maintain a preferred safe distance
-* Detect the creeper's hissing state
-* Trigger emergency retreat
-* Force additional retreat when extremely close
-* Prefer ranged attacks when available
-* Track successful creeper evasions
-
-This is implemented separately from generic mob combat rather than being treated as another ordinary hostile entity.
-
----
-
-# 🧠 Task Manager
-
-Argus has a task-management layer between commands and the underlying systems.
-
-Tasks can move through states such as:
-
-```text
-PENDING
-   ↓
-RUNNING
-   ↓
-COMPLETED
-
-RUNNING → PAUSED
-RUNNING → FAILED
+## Architecture Overview
+
+```
++-------------------------------------------------------------------------+
+|                              Command Sources                            |
+|       Minecraft Chat      |   Web Dashboard    |     REST API (v1)      |
++-------------------------------------------------------------------------+
+                                     │
+                                     ▼
++-------------------------------------------------------------------------+
+|                         UnifiedCommandGateway                           |
+|  - 5-Tier RBAC (Owner 4, Admin 3, Trusted 2, Guest 1, Blocked 0)        |
+|  - 100+ NLP Intent Recognition & Levenshtein Spell Correction           |
+|  - Multi-Turn Disambiguation & 2-Phase Critical Action Confirmation     |
++-------------------------------------------------------------------------+
+                                     │
+                                     ▼
++-------------------------------------------------------------------------+
+|                               TaskManager                               |
+|  - Priority Queue (Survival 100 -> Idle 30) with Preemptive Execution   |
+|  - Authoritative LockManager (5-Minute Timeout & Deadlock Prevention)   |
++-------------------------------------------------------------------------+
+                                     │
+                 +───────────────────┴───────────────────+
+                 ▼                                       ▼
++---------------------------------+     +---------------------------------+
+|            AIBrain              |     |          Domain Skills          |
+|  - Adaptive Tick Scheduler:     |     |  - MineSkill (Corridors & Veins)|
+|      Combat: 50ms (20 TPS)      |     |  - FarmSkill (16-Seed Reserve)  |
+|      Active: 100ms (10 TPS)     |     |  - BuildSkill (50-Blk Checkpt)  |
+|      Idle:   500ms (2 TPS)      |     |  - ChopTreeSkill (Replanting)   |
+|      Dash:   1000ms (1 TPS)     |     |  - CombatSkill (Tactical Kiting)|
+|  - Subsystem Heartbeat Watchdog |     |  - LogisticsSkill (Warehouse)   |
+|  - Ambient Bed & Eat Routines   |     |  - CraftSkill (Auto-Crafting)   |
++---------------------------------+     +---------------------------------+
+                                     │
+                                     ▼
++-------------------------------------------------------------------------+
+|                     Shared Services & Mineflayer                        |
+|  NavigationService (Sole Pathing Authority) | SafetyService (<3 Hearts) |
+|  InventoryService (Fixed Hotbar Layout)     | ToolService (Durability)  |
++-------------------------------------------------------------------------+
+                                     │
+                                     ▼
++-------------------------------------------------------------------------+
+|                     EventBus & Telemetry Hub                            |
+|  WebSocket Live Stream | WebGL 3D Dashboard | 5-Minute Checksum Snapshots|
++-------------------------------------------------------------------------+
 ```
 
-The task system supports:
+---
 
-* Priorities
-* Task queues
-* Duration-based tasks
-* Pause/resume
-* Cancellation
-* Emergency stopping
-* Composite tasks
-* Persistent task history
+## Canonical Feature Compendium (Parts 0–11)
 
-### Composite routines
+- **Part 0: Infrastructure & API Server**: Express RESTful endpoints, WebSocket live streaming, 7-level structured logger, 5-minute SHA-256 state snapshots with last-known-good corruption recovery, and graceful shutdown on `SIGINT`/`SIGTERM`.
+- **Part 1: Central AI Brain**: Adaptive tick scheduler (50ms combat, 100ms active task, 500ms idle, 1000ms dashboard), 50ms priority formula evaluation, subsystem heartbeats, and autonomous ambient homestead routines (sleeping at night, auto-eating).
+- **Part 2: Security & 5-Tier RBAC**: `ShadowPace` anchored as permanent immutable Tier-4 Owner; granular permissions (Admin, Trusted, Guest, Blocked); sliding rate limit (10 cmds/min); 3-strike brute force lockout (10m block).
+- **Part 3: Communication & Event Bus**: Decoupled pub/sub event bus, priority message routing, and optional outbound webhook dispatcher.
+- **Part 4: Natural Language Processing**: 100+ NLP intents, clause tokenization, Levenshtein distance typo auto-correction, coordinate parsing (3D, 2D, relative), and interactive disambiguation.
+- **Part 5: Navigation & Spatial Awareness**: Authoritative pathfinding wrapper around `mineflayer-pathfinder`, dynamic terrain hazard avoidance (lava, fire, void), and emergency retreat on low health.
+- **Part 6: Mining**: Deep branch-mining, ore priority ranks, vein BFS scanning, mandatory slot-6 hotbar water bucket guard, straight down/up digging prohibition, torches placed every 8 blocks, and deep escape waypoints every 64 blocks below Y=-40.
+- **Part 7: Farming**: Autonomous crop harvesting, immediate replanting, bone meal acceleration, and strict preservation of at least 16 seeds during storage deposit.
+- **Part 8: Building**: Procedural schematics (walls, floors, shelters, stairs), layer-by-layer placement order, temporary scaffolding assembly/cleanup, and checkpoint emissions every 50 blocks.
+- **Part 9: Combat & Tactical Defense**: Threat scoring, weapon rating, shield blocking against skeletons, kiting creepers, low-health retreat, and guaranteed friendly protection for all players, villagers, golems, and tamed pets.
+- **Part 10: Inventory & Warehouse Logistics**: Fixed hotbar layout (0=Weapon, 1-3=Tools, 6=Water, 8=Food, Off=Shield/Totem), durability warnings at 20% and critical action at 5%, container spatial indexing, and kit restocking (`miner`, `warrior`, `woodcutter`, `farmer`).
+- **Part 11: Task Manager & Integration**: Priority queue preemption, single authoritative `LockManager` with 5-minute timeout protection, suspended task checkpoints, and rollback.
 
-Higher-level routines can combine multiple subsystems.
+---
 
-For example:
+## Prerequisites
 
-```text
-Prepare for night
-        ↓
-Check shelter
-        ↓
-Cook food
-        ↓
-Craft equipment
-        ↓
-Craft torches
-        ↓
-Equip armor
+- **Node.js**: `v20.x` or later (LTS recommended)
+- **Minecraft Server**: Java Edition 1.19.4+ (Vanilla, Paper, Spigot, Fabric)
+- **MongoDB**: Optional (For persistent container indexing; falls back automatically to local atomic JSON state)
+
+---
+
+## Installation & Setup
+
+```bash
+# Clone repository
+git clone https://github.com/argus-bot/argus.git
+cd argus
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+
+# Run test suite
+npm test
+
+# Launch Argus
+npm start
 ```
 
-This allows a single objective to orchestrate multiple independent systems.
-
 ---
 
-# 💬 Natural-Language Commands
+## Configuration (`.env`)
 
-Argus includes a natural-language command layer based on pattern recognition and aliases.
-
-Examples:
-
-```text
-mine 64 diamonds
-repair base
-follow me
-return home
-prepare for night
-setup base
-defend me
-sort inventory
-craft tools
+```env
+OWNER_USERNAME=ShadowPace
+MC_HOST=localhost
+MC_PORT=25565
+MC_VERSION=1.19.4
+API_PORT=3000
+MONGODB_URI=mongodb://localhost:27017/argus
+DASHBOARD_PASSWORD=admin
+DASHBOARD_SESSION_SECRET=your_secure_secret_key_here
 ```
 
-The parser supports aliases, duration expressions, default quantities, and multiple command categories.
+---
 
-The integration layer expands this with **500+ regex patterns**, synonym handling, and contextual references.
+## Web Dashboard & Telemetry
+
+Open `http://localhost:3000` in your web browser:
+- **WebGL 3D Map**: Real-time visualization of bot coordinates and surrounding voxel terrain.
+- **Live Vitals**: Health, hunger, active tick rate, and current task progress.
+- **Interactive Command Panel**: Send authenticated commands directly into the `UnifiedCommandGateway`.
+- **Log Streamer**: Filter logs by severity and subsystem category in real time.
 
 ---
 
-# 🤖 Autonomous Mode
+## Docker Deployment
 
-Autonomous mode is where the individual systems start behaving like one larger system.
+```bash
+# Build the production image
+docker build -t argus-bot:1.0.0 .
 
-Argus continuously evaluates its current state using a **Needs Assessment** layer.
-
-It considers factors such as:
-
-* ❤️ Health
-* 🍖 Hunger
-* ⛏️ Tool availability
-* 📦 Resource stockpile
-* 🏠 Shelter
-* 🛡️ Defensive readiness
-
-It then selects activities based on which needs require attention.
-
-For example:
-
-```text
-                 World State
-                      ↓
-               Needs Assessment
-                      ↓
-              Priority Evaluation
-                      ↓
-       ┌──────────────┼──────────────┐
-       ↓              ↓              ↓
-   Critical         High           Normal
-       ↓              ↓              ↓
-   Recover        Gather/Craft    Explore/Fish
-       │              │              │
-       └──────────────┴──────────────┘
-                      ↓
-                 Execute Task
-                      ↓
-                Update State
-                      ↓
-                 Re-evaluate
+# Run with persistent volume
+docker run -d \
+  --name argus \
+  -p 3000:3000 \
+  -e MC_HOST="your.server.ip" \
+  -e OWNER_USERNAME="ShadowPace" \
+  -v argus_data:/data \
+  argus-bot:1.0.0
 ```
 
-Critical conditions can interrupt the currently selected activity.
+---
 
-The autonomous system can also initiate actions such as:
+## Render.com Deployment
 
-* Gathering resources
-* Crafting essential tools
-* Improving defense
-* Building shelter
-* Fishing
-* Farming
-* Exploring
-
-User-issued tasks take precedence over autonomous behavior.
+Argus includes a native `render.yaml` configuration:
+1. Connect repository to Render.
+2. Select Web Service deployment.
+3. Attach a Persistent Disk mounted to `/data`.
+4. Define environment variables in the Render dashboard.
 
 ---
 
-# 💾 Persistence & Memory
+## Limitations
 
-Argus maintains state across different parts of its operation.
-
-Persistent/stateful information includes:
-
-* Server-specific authentication profiles
-* Configuration
-* Death locations
-* Task history
-* Current operating mode
-* Command history
-* Combat history
-* Player attack records
-* Home position
-* Explored positions
-* Runtime logs
-* Fishing statistics
-
-For example, after a death, Argus can remember the location and attempt to navigate back toward the dropped items.
-
-The project also maintains bounded runtime log history and writes logs asynchronously to disk.
+- **Java Edition Only**: Bedrock Edition is not supported.
+- **Prismarine Physics**: Fast Elytra flight and complex Redstone machine interaction are not modeled.
+- **Single-World Scope**: Dimension changes (Nether/End) are scheduled for Phases 14–15.
 
 ---
 
-# 🌐 Web Dashboard
+## Contributing & License
 
-Argus includes a web-based monitoring and control layer.
+Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before opening pull requests.
 
-The dashboard can expose:
-
-* Bot vitals
-* Inventory
-* Tasks
-* Logs
-* Nearby entities
-* Performance information
-* Server information
-* Runtime state
-
-A WebSocket connection provides real-time state and log updates.
-
-The REST API also exposes controls for:
-
-* Task management
-* Autonomous mode
-* Standby mode
-* Mining
-* Farming
-* Fishing
-* Waypoints
-* Chat
-* Movement
-* Looking
-* Jumping
-* Server switching
-* Emergency stopping
-
-There is also a dedicated emergency/panic action capable of stopping active tasks and autonomous systems.
-
----
-
-# 🛡️ Resilience
-
-Argus is designed with long-running operation in mind.
-
-It includes recovery mechanisms across multiple layers:
-
-```text
-Connection
-   └── Auto-Reconnect
-
-Navigation
-   └── Stuck Detection → Recovery
-
-Mining
-   └── Hazard Detection → Abort / Recover
-
-Combat
-   └── Low Health → Retreat
-
-Tasks
-   └── Failure → Controlled Task State
-
-Death
-   └── Remember Location → Recovery Attempt
-
-Process
-   └── Shutdown → Save State + Flush Logs
-```
-
-The system also has global exception/rejection handling and graceful shutdown behavior.
-
----
-
-# 🏛️ Architecture
-
-Argus is divided into specialized modules.
-
-```text
-                         ARGUS
-                           │
-                 ┌─────────┴─────────┐
-                 │ Global State / API │
-                 └─────────┬─────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ↓                  ↓                  ↓
-   Navigation           Mining            Farming
-        │                  │                  │
-        └──────────────┬───┴──────────────────┘
-                       ↓
-                  Building
-                       │
-                       ↓
-                   Combat
-                       │
-                       ↓
-               Inventory Manager
-                       │
-                       ↓
-                 Task Manager
-                       │
-                       ↓
-                Autonomous AI
-                       │
-                       ↓
-             Dashboard / Web API
-```
-
-The architecture separates individual responsibilities while allowing the systems to share state and coordinate through the integration layer.
-
----
-
-# 🧩 Technology
-
-* **JavaScript**
-* **Node.js**
-* **Mineflayer**
-* **mineflayer-pathfinder**
-* **Express**
-* **WebSocket**
-* Minecraft Java Edition
-
----
-
-# 📊 Project Scope
-
-The current codebase contains **176 documented, code-backed features** spanning:
-
-* Connection & lifecycle
-* Authentication
-* Persistence
-* Navigation
-* Mining
-* Farming
-* Building
-* Combat
-* Inventory
-* Task management
-* Natural-language interaction
-* Autonomous behavior
-* Chat
-* Web dashboard
-* Standby survival
-
-The feature count is based on an exhaustive codebase analysis rather than a marketing estimate.
-
----
-
-# 🎯 Why I Built It
-
-Argus began as a side project.
-
-I found existing open-source Minecraft bots relatively simple and wanted to see how much further I could take the idea by combining many independent automation systems into one coherent architecture.
-
-The project became an experiment in:
-
-* Modular software architecture
-* Autonomous task execution
-* State management
-* Pathfinding
-* Resource planning
-* Recovery systems
-* Long-running automation
-* System integration
-
-It is **not intended to represent academic research**. It is an engineering project built to explore these ideas in practice.
-
----
-
-# 🚧 Project Status
-
-Argus has been released publicly and is currently an independent side project.
-
-Because the public release is recent, external usage and community feedback are still developing.
-
-Future work will focus on testing, refinement, reliability, and improving the architecture based on real-world use.
-
----
-
-# 👤 Author
-
-## Shreyansh Parganiha
-
-**Student · Researcher + Builder**
-
-Interested in:
-
-* Artificial Intelligence / Machine Learning
-* Systems Engineering
-* Autonomous Systems
-* Software Architecture
-
-[GitHub](https://github.com/SP2502)
-
----
-
-## License
-
-See [`LICENSE`](LICENSE) for licensing information.
+Argus is free and open-source software released under the [MIT License](LICENSE).

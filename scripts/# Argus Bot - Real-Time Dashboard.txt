@@ -1,0 +1,58 @@
+# Argus Bot - Real-Time Dashboard
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argus Bot - Real-Time Dashboard</title>
+
+  <!-- Google Fonts: Outfit (Titles), Inter (Body), JetBrains Mono (Coordinates & Terminal) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Master Stylesheet Bundle -->
+  <link rel="stylesheet" href="/css/dashboard.css">
+
+  <!-- Clean SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/icons/logo.svg">
+</head>
+<body>
+
+  <!-- Root Application Container -->
+  <div id="appRoot"></div>
+
+  <!-- Reusable Modals Container -->
+  <div id="authModalOverlay" class="modal-backdrop" style="display: none;"></div>
+  <div id="confirmModalOverlay" class="modal-backdrop" style="display: none;"></div>
+  <div id="serverConfigModalOverlay" class="modal-backdrop" style="display: none;"></div>
+
+  <!-- Scripts: Utils & State -->
+  <script src="/js/utils/api.js"></script>
+  <script src="/utils/formatters.js"></script>
+  <script src="/state/DashboardState.js"></script>
+
+  <!-- Scripts: SVG Icons & UI Components -->
+  <script src="/components/SvgIcons.js"></script>
+  <script src="/components/SvgSparkline.js"></script>
+  <script src="/components/ModalDialog.js"></script>
+  <script src="/components/TaskTimeline.js"></script>
+  <script src="/components/SvgRadar.js"></script>
+  <script src="/components/InventoryMatrix.js"></script>
+  <script src="/components/AppShell.js"></script>
+
+  <!-- Scripts: Specialized Operational Pages -->
+  <script src="/pages/CommandDeckPage.js"></script>
+  <script src="/pages/TaskCenterPage.js"></script>
+  <script src="/pages/DomainsPage.js"></script>
+  <script src="/pages/InventoryStoragePage.js"></script>
+  <script src="/pages/WorldRadarPage.js"></script>
+  <script src="/pages/ObservabilityPage.js"></script>
+  <script src="/pages/SecurityAuditPage.js"></script>
+  <script src="/pages/SettingsPage.js"></script>
+
+  <!-- Main Controller Entry Point -->
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
