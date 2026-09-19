@@ -47,7 +47,7 @@ class AuthManager {
 
     const checkTimeoutInterval = process.env.CHECK_TIMEOUT_INTERVAL
       ? parseInt(process.env.CHECK_TIMEOUT_INTERVAL, 10)
-      : 60000;
+      : 120000;
 
     return {
       username: process.env.MC_USERNAME || 'Argus',

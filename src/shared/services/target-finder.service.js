@@ -19,10 +19,19 @@ class TargetFinderService {
   findNearestBlock(blockNames = [], radius = 32) {
     if (!this.bot || !this.bot.findBlock) return null;
     try {
-      const matcher = (block) => {
-        if (!block) return false;
-        return blockNames.includes(block.name);
-      };
+      let matcher;
+      if (typeof blockNames === 'function') {
+        matcher = blockNames;
+      } else if (Array.isArray(blockNames)) {
+        const set = new Set(blockNames.map((n) => (typeof n === 'string' ? n.toLowerCase() : n)));
+        matcher = (block) => block && (set.has(block.name) || set.has(block.type));
+      } else if (typeof blockNames === 'string') {
+        const clean = blockNames.toLowerCase();
+        matcher = (block) => block && block.name === clean;
+      } else {
+        matcher = (block) => block && block.name !== 'air';
+      }
+
       return this.bot.findBlock({
         matching: matcher,
         maxDistance: radius
@@ -55,27 +64,76 @@ class TargetFinderService {
   }
 
   /**
-   * Finds all blocks within a radius satisfying an optional predicate.
-   * @param {Function} [predicate] - Evaluation predicate (block: Block) => boolean
+   * Finds all blocks within a radius satisfying an optional predicate or target block array.
+   * @param {Function|Array<string|number>|string} [predicate] - Predicate function, array of block names, or string
    * @param {number} [radius=16] - Search radius in blocks
+   * @param {number} [limit=50] - Maximum matching blocks to return
    * @returns {Array<any>} List of matching blocks
    */
-  findAllInRadius(predicate, radius = 16) {
+  findAllInRadius(predicate, radius = 16, limit = 50) {
     if (!this.bot || !this.bot.entity || !this.bot.entity.position) return [];
+
+    let matchFn;
+    if (typeof predicate === 'function') {
+      matchFn = predicate;
+    } else if (Array.isArray(predicate)) {
+      const set = new Set(predicate.map((p) => (typeof p === 'string' ? p.toLowerCase() : p)));
+      matchFn = (block) => block && (set.has(block.name) || set.has(block.type));
+    } else if (typeof predicate === 'string') {
+      const clean = predicate.toLowerCase();
+      matchFn = (block) => block && block.name === clean;
+    } else {
+      matchFn = (block) => block && block.name !== 'air';
+    }
+
+    // 1. Try Mineflayer native optimized bot.findBlocks when available
+    if (typeof this.bot.findBlocks === 'function') {
+      try {
+        const positions = this.bot.findBlocks({
+          matching: matchFn,
+          maxDistance: radius,
+          count: limit || 50
+        });
+        if (positions && positions.length > 0) {
+          return positions.map((pos) => this.bot.blockAt(pos, false)).filter(Boolean);
+        }
+        return [];
+      } catch (err) {
+        // Fallback to spatial scan if findBlocks is unsupported in mock or throws
+      }
+    }
+
+    // 2. Spatial scan fallback (bounded vertically for performance)
     const results = [];
     const botPos = this.bot.entity.position.floored();
+    const minY = Math.max(-16, -radius);
+    const maxY = Math.min(24, radius);
+
     for (let x = -radius; x <= radius; x++) {
       for (let z = -radius; z <= radius; z++) {
-        for (let y = -radius; y <= radius; y++) {
+        for (let y = minY; y <= maxY; y++) {
           const checkPos = botPos.offset(x, y, z);
-          const block = this.bot.blockAt(checkPos);
-          if (block && block.name !== 'air' && (!predicate || predicate(block))) {
+          const block = this.bot.blockAt(checkPos, false);
+          if (block && block.name !== 'air' && matchFn(block)) {
             results.push(block);
+            if (limit && results.length >= limit) {
+              return results;
+            }
           }
         }
       }
     }
     return results;
+  }
+
+  /**
+   * Health heartbeat check for AIBrain.
+   * @returns {{ ok: boolean }}
+   */
+  ping() {
+    return {
+      ok: Boolean(this.bot)
+    };
   }
 }
 

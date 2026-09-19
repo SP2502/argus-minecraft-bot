@@ -71,15 +71,18 @@ class ChopTreeSkill extends BaseSkill {
     while (targetQuantity === null || logsCollected < targetQuantity) {
       await this.safetyCheckLoop(taskContext);
 
-      // Check / Equip Axe
-      const axeEquipped = await this.ctx.tools.equipBest('axe');
-      if (!axeEquipped) {
-        throw new Error('No axe available in inventory.');
+      // Check / Equip Axe (falls back to bare hands if starting fresh)
+      let axeEquipped = null;
+      if (this.ctx && this.ctx.tools) {
+        try { axeEquipped = await this.ctx.tools.equipBest('axe'); } catch (e) {}
+      }
+      if (!axeEquipped && this.ctx && this.ctx.events) {
+        this.ctx.events.emit('log', 'No axe available in inventory; harvesting wood with bare hands.');
       }
 
-      // Check tool durability
+      // Check tool durability if holding an axe
       const currentTool = this.bot.heldItem;
-      if (currentTool && this.ctx.tools.isAboutToBreak(currentTool, 5)) {
+      if (currentTool && currentTool.name && currentTool.name.includes('axe') && this.ctx.tools.isAboutToBreak(currentTool, 5)) {
         const backupEquipped = await this.ctx.tools.equipBest('axe');
         if (!backupEquipped || this.ctx.tools.isAboutToBreak(this.bot.heldItem, 5)) {
           this._saveCheckpoint(taskContext, { treeFamily, targetQuantity, logsCollected, treesCut, saplingsPlanted, skipped });
@@ -88,8 +91,16 @@ class ChopTreeSkill extends BaseSkill {
       }
 
       // Find Candidate Logs
-      const candidateLogs = await this._findCandidateLogBlocks(treeFamily, searchRadius);
+      let candidateLogs = await this._findCandidateLogBlocks(treeFamily, searchRadius);
       if (!candidateLogs || candidateLogs.length === 0) {
+        if (searchRadius < forestryConfig.MAX_SEARCH_RADIUS) {
+          candidateLogs = await this._findCandidateLogBlocks(treeFamily, forestryConfig.MAX_SEARCH_RADIUS);
+        }
+      }
+      if (!candidateLogs || candidateLogs.length === 0) {
+        if (logsCollected === 0) {
+          throw new Error(`No natural ${treeFamily === 'any' ? '' : treeFamily + ' '}trees found within search radius (${forestryConfig.MAX_SEARCH_RADIUS}m).`);
+        }
         break; // No more trees in radius
       }
 
@@ -106,6 +117,7 @@ class ChopTreeSkill extends BaseSkill {
 
         if (evalResult.shouldPreserve) {
           skipped++;
+          console.log(`[ChopTreeSkill] Skipped log at (${logBlock.position.x}, ${logBlock.position.y}, ${logBlock.position.z}): ${evalResult.reason}`);
           eventBus.emit('forestry.skipped', { position: logBlock.position, reason: evalResult.reason });
           continue;
         }
@@ -118,6 +130,9 @@ class ChopTreeSkill extends BaseSkill {
       if (!treeAnalysis) {
         unreachableCount++;
         if (unreachableCount >= forestryConfig.MAX_UNREACHABLE_TREES_BEFORE_STOP) {
+          if (logsCollected === 0) {
+            throw new Error(`Candidate trees found but all were unreachable or preserved near bases.`);
+          }
           break;
         }
         await new Promise((r) => setTimeout(r, forestryConfig.TREE_RESCAN_DELAY_MS));
@@ -133,10 +148,20 @@ class ChopTreeSkill extends BaseSkill {
         continue;
       }
 
-      const navSuccess = await this.ctx.nav.goTo(accessPos, { allowBreak: false });
-      if (!navSuccess) {
-        skipped++;
-        continue;
+      const navSuccess = await this.ctx.nav.goTo(accessPos, { allowBreak: true, range: 3 });
+      const isSuccess = navSuccess === true || (navSuccess && navSuccess.success === true);
+      if (!isSuccess) {
+        let inReach = false;
+        if (this.bot.entity && this.bot.entity.position && treeAnalysis.rootPosition) {
+          const bp = this.bot.entity.position;
+          const rp = treeAnalysis.rootPosition;
+          const dist = Math.sqrt((bp.x - rp.x) ** 2 + (bp.y - rp.y) ** 2 + (bp.z - rp.z) ** 2);
+          if (dist <= 4.5) inReach = true;
+        }
+        if (!inReach) {
+          skipped++;
+          continue;
+        }
       }
 
       // Cut Logs in Safe Top-Down Order
@@ -144,14 +169,38 @@ class ChopTreeSkill extends BaseSkill {
       for (const logPos of cutOrder) {
         await this.safetyCheckLoop(taskContext);
 
-        const currentBlock = this.bot.blockAt(logPos, false);
-        if (!currentBlock || !currentBlock.name.includes('log') && !currentBlock.name.includes('stem')) {
+        let currentBlock = null;
+        try {
+          if (typeof logPos.floored === 'function') {
+            currentBlock = this.bot.blockAt(logPos.floored(), false);
+          } else {
+            const { Vec3 } = require('vec3');
+            currentBlock = this.bot.blockAt(new Vec3(Math.floor(logPos.x), Math.floor(logPos.y), Math.floor(logPos.z)), false);
+          }
+        } catch (e) {
+          try { currentBlock = this.bot.blockAt(logPos, false); } catch (e2) {}
+        }
+
+        if (!currentBlock || (!currentBlock.name.includes('log') && !currentBlock.name.includes('stem'))) {
           continue;
         }
 
-        await this.ctx.tools.equipBest('axe');
-        await this.bot.dig(currentBlock, true);
-        logsCollected++;
+        try {
+          await this.ctx.tools.equipBest('axe');
+          if (this.bot.entity && this.bot.entity.position) {
+            const bp = this.bot.entity.position;
+            const dist = Math.sqrt((bp.x - logPos.x) ** 2 + (bp.y - logPos.y) ** 2 + (bp.z - logPos.z) ** 2);
+            if (dist > 4.2) {
+              await this.ctx.nav.goTo(logPos, { allowBreak: true, range: 3 });
+            }
+          }
+          await this.bot.dig(currentBlock, true);
+          logsCollected++;
+        } catch (digErr) {
+          if (this.ctx && this.ctx.events) {
+            this.ctx.events.emit('log', `Warning: Failed to dig log at (${logPos.x}, ${logPos.y}, ${logPos.z}): ${digErr.message}`);
+          }
+        }
 
         eventBus.emit('forestry.log_cut', {
           family: treeAnalysis.family,
@@ -181,8 +230,12 @@ class ChopTreeSkill extends BaseSkill {
 
       // Replant if enabled
       if (shouldReplant) {
-        const planted = await this.replantTree(treeAnalysis, params);
-        if (planted) saplingsPlanted += planted;
+        try {
+          const planted = await this.replantTree(treeAnalysis, params);
+          if (planted) saplingsPlanted += planted;
+        } catch (replantErr) {
+          // Non-fatal
+        }
       }
 
       // Inventory capacity check
@@ -216,21 +269,34 @@ class ChopTreeSkill extends BaseSkill {
     const saplingItemName = familyDef.saplingItem;
 
     // Check sapling availability in inventory
-    const saplingItem = this.ctx.inv.findItem(saplingItemName);
+    const saplingItem = (this.ctx && this.ctx.inv && typeof this.ctx.inv.findItem === 'function')
+      ? this.ctx.inv.findItem(saplingItemName)
+      : (this.bot && this.bot.inventory ? this.bot.inventory.items().find((i) => i && i.name === saplingItemName) : null);
     if (!saplingItem || saplingItem.count < reqCount) {
       return 0;
     }
 
     // Verify ground substrate
     const rootPos = treeAnalysis.rootPosition;
-    const groundBlock = this.bot.blockAt({ x: rootPos.x, y: rootPos.y - 1, z: rootPos.z }, false);
+    let groundBlock = null;
+    try {
+      const { Vec3 } = require('vec3');
+      groundBlock = this.bot.blockAt(new Vec3(Math.floor(rootPos.x), Math.floor(rootPos.y - 1), Math.floor(rootPos.z)), false);
+    } catch (e) {
+      try { groundBlock = this.bot.blockAt({ x: rootPos.x, y: rootPos.y - 1, z: rootPos.z }, false); } catch (e2) {}
+    }
     if (!groundBlock || !familyDef.plantableGround.includes(groundBlock.name)) {
       return 0;
     }
 
     try {
-      await this.ctx.inv.equip(saplingItemName, 'hand');
-      await this.bot.placeBlock(groundBlock, { x: 0, y: 1, z: 0 });
+      if (this.ctx && this.ctx.inv && typeof this.ctx.inv.equip === 'function') {
+        await this.ctx.inv.equip(saplingItemName, 'hand');
+      } else if (typeof this.bot.equip === 'function') {
+        await this.bot.equip(saplingItem, 'hand');
+      }
+      const { Vec3 } = require('vec3');
+      await this.bot.placeBlock(groundBlock, new Vec3(0, 1, 0));
       eventBus.emit('forestry.replanted', { family, position: rootPos, count: 1 });
       return 1;
     } catch (err) {

@@ -39,6 +39,24 @@ class CommandPlanner {
     // 1. Single Command Plan
     if (intents.length === 1) {
       const op = await this._buildOperation(intents[0], entities, requestContext, 0);
+
+      // Intelligent Goal Decomposition (e.g. mine diamonds -> gather wood -> craft wooden pickaxe -> cobblestone -> stone pickaxe & furnace -> iron -> iron pickaxe -> diamonds)
+      if (this.ctx && this.ctx.goalPlanner && !op.isControl && (op.intentName === 'mine' || op.intentName === 'craft')) {
+        const decomp = this.ctx.goalPlanner.decompose(op, this.ctx.inv);
+        if (decomp.isDecomposed && decomp.steps && decomp.steps.length > 1) {
+          return {
+            planId,
+            type: 'sequence',
+            operations: decomp.steps,
+            ambiguities: op.ambiguities || [],
+            missing: op.missing || [],
+            isIntelligentWorkflow: true,
+            preparationExplanation: decomp.explanation,
+            summary: decomp.summary
+          };
+        }
+      }
+
       return {
         planId,
         type: op.isControl ? 'control' : 'single',
@@ -53,26 +71,38 @@ class CommandPlanner {
     const allAmbiguities = [];
     const allMissing = [];
     let previousOpId = null;
+    let compoundExplanation = null;
 
     for (let i = 0; i < intents.length; i++) {
       const intentItem = intents[i];
       const opEntities = intentItem.entities || entities;
       const op = await this._buildOperation(intentItem, opEntities, requestContext, i);
 
-      // Link dependency chain
-      if (previousOpId && !op.isControl) {
-        op.dependsOn.push(previousOpId);
-      }
-      previousOpId = op.operationId;
-
-      if (op.ambiguities && op.ambiguities.length > 0) {
-        allAmbiguities.push(...op.ambiguities);
-      }
-      if (op.missing && op.missing.length > 0) {
-        allMissing.push(...op.missing);
+      let opsToInsert = [op];
+      if (this.ctx && this.ctx.goalPlanner && !op.isControl && (op.intentName === 'mine' || op.intentName === 'craft')) {
+        const decomp = this.ctx.goalPlanner.decompose(op, this.ctx.inv);
+        if (decomp.isDecomposed && decomp.steps && decomp.steps.length > 1) {
+          opsToInsert = decomp.steps;
+          if (!compoundExplanation) compoundExplanation = decomp.explanation;
+        }
       }
 
-      operations.push(op);
+      for (const currentOp of opsToInsert) {
+        // Link dependency chain
+        if (previousOpId && !currentOp.isControl) {
+          currentOp.dependsOn = [previousOpId];
+        }
+        previousOpId = currentOp.operationId;
+
+        if (currentOp.ambiguities && currentOp.ambiguities.length > 0) {
+          allAmbiguities.push(...currentOp.ambiguities);
+        }
+        if (currentOp.missing && currentOp.missing.length > 0) {
+          allMissing.push(...currentOp.missing);
+        }
+
+        operations.push(currentOp);
+      }
     }
 
     return {
@@ -80,7 +110,9 @@ class CommandPlanner {
       type: 'sequence',
       operations,
       ambiguities: allAmbiguities,
-      missing: allMissing
+      missing: allMissing,
+      isIntelligentWorkflow: Boolean(compoundExplanation),
+      preparationExplanation: compoundExplanation
     };
   }
 
@@ -251,6 +283,23 @@ class CommandPlanner {
       } else if (intentName === 'go_home') {
         params.targetLocation = 'primary_base';
       }
+    }
+
+    // 3b. Follow Mode Parameters
+    if (intentName === 'follow') {
+      params.mode = 'follow';
+      if (!entities.player || entities.player === 'me' || entities.player === 'sender') {
+        params.player = (requestContext && requestContext.senderId) || (process.env.OWNER_USERNAME || '').trim();
+      } else {
+        params.player = entities.player;
+      }
+      if (entities.quantity && entities.quantity.value) {
+        params.distance = entities.quantity.value;
+      }
+    }
+
+    if (intentName === 'stop_following') {
+      params.mode = 'stop_following';
     }
 
     // 4. Inventory Parameters

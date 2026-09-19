@@ -24,17 +24,46 @@ class IntentRegistry {
    * Loads all JSON intent definitions from nlp/intent-data/
    * @private
    */
+  /**
+   * Loads all JSON intent definitions from nlp/intent-data/ and auto-discovers
+   * modular *.intents.json definitions across src/modules/
+   * @private
+   */
   loadBuiltInIntents() {
+    // 1. Central Core/Task/Macro/Comm intents
     const dataDir = path.join(__dirname, 'intent-data');
-    if (!fs.existsSync(dataDir)) return;
+    if (fs.existsSync(dataDir)) {
+      const files = fs.readdirSync(dataDir).filter((f) => f.endsWith('.json'));
+      for (const file of files) {
+        try {
+          const filePath = path.join(dataDir, file);
+          this.registerIntentFile(filePath);
+        } catch (err) {
+          console.warn(`[IntentRegistry] Error loading ${file}:`, err.message);
+        }
+      }
+    }
 
-    const files = fs.readdirSync(dataDir).filter((f) => f.endsWith('.json'));
-    for (const file of files) {
+    // 2. Auto-discover modular *.intents.json across sibling module directories
+    const modulesDir = path.resolve(__dirname, '..');
+    if (fs.existsSync(modulesDir)) {
       try {
-        const filePath = path.join(dataDir, file);
-        this.registerIntentFile(filePath);
+        const subdirs = fs.readdirSync(modulesDir, { withFileTypes: true });
+        for (const dirent of subdirs) {
+          if (dirent.isDirectory() && dirent.name !== 'nlp') {
+            const dirPath = path.join(modulesDir, dirent.name);
+            const intentFiles = fs.readdirSync(dirPath).filter((f) => f.endsWith('.intents.json'));
+            for (const file of intentFiles) {
+              try {
+                this.registerIntentFile(path.join(dirPath, file));
+              } catch (err) {
+                // Silently handle if already registered
+              }
+            }
+          }
+        }
       } catch (err) {
-        console.warn(`[IntentRegistry] Error loading ${file}:`, err.message);
+        console.warn('[IntentRegistry] Auto-discovery warning:', err.message);
       }
     }
   }
@@ -102,8 +131,11 @@ class IntentRegistry {
 
     if (this.intents.has(name)) {
       const existingSource = this.intentSources.get(name) || 'unknown';
+      if (existingSource === source) {
+        return; // Idempotent re-registration from same file
+      }
       throw new Error(
-        `Duplicate intent ID "${name}" detected in "${source}". Already registered by "${existingSource}".`
+        `Duplicate intent ID "${name}" detected! Conflict between new source "${source}" and existing source "${existingSource}".`
       );
     }
 

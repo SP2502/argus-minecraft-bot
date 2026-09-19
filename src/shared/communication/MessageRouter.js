@@ -217,6 +217,42 @@ class MessageRouter {
    * @param {Object} request - Origin command request
    * @param {import('../commands/CommandResponse')} response - Formatted command response
    */
+  async _sendMinecraftChat(message, whisperTarget = null) {
+    if (!this.bot || typeof this.bot.chat !== 'function') {
+      console.warn('[MessageRouter] Cannot send in-game chat: bot instance is unavailable.');
+      return;
+    }
+    const clean = String(message).trim();
+    if (!clean) return;
+
+    // Split multi-line responses to avoid packet overflow or spam kick
+    const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+    // Limit to max 5 lines per single output burst to avoid server kick
+    const cappedLines = lines.slice(0, 5);
+    if (lines.length > 5) {
+      cappedLines.push(`...and ${lines.length - 5} more items. (Use specific help topic)`);
+    }
+
+    for (let i = 0; i < cappedLines.length; i++) {
+      const line = cappedLines[i];
+      try {
+        if (whisperTarget && typeof this.bot.whisper === 'function') {
+          this.bot.whisper(whisperTarget, line);
+          console.log(`[MessageRouter] Whispered to <${whisperTarget}>: "${line}"`);
+        } else {
+          this.bot.chat(line);
+          console.log(`[MessageRouter] Sent in-game chat: "${line}"`);
+        }
+      } catch (err) {
+        console.warn(`[MessageRouter] Failed to dispatch chat packet: ${err.message}`);
+      }
+      if (cappedLines.length > 1 && i < cappedLines.length - 1) {
+        // Safe 950ms spacing between chat lines prevents server disconnect.spam kicks
+        await new Promise(r => setTimeout(r, 950));
+      }
+    }
+  }
+
   async respondToCommand(request, response) {
     if (!response || !response.message) return;
 
@@ -226,25 +262,14 @@ class MessageRouter {
 
     // 1. Minecraft In-Game Chat Channel
     if (source === 'minecraft') {
-      if (delivery === 'public' || response.status === 'denied' || response.status === 'clarification' || response.status === 'confirmation_required') {
-        try {
-          this.bot.chat(response.message);
-        } catch (e) {
-          // ignore
-        }
-      } else if (delivery === 'owner_whisper') {
-        try {
-          this.bot.whisper(this.ownerUsername, `[${botDisplayName}] ${response.message}`);
-        } catch (e) {
-          // ignore
-        }
+      if (delivery === 'owner_whisper') {
+        await this._sendMinecraftChat(`[${botDisplayName}] ${response.message}`, this.ownerUsername);
+      } else if (request.metadata && request.metadata.isWhisper) {
+        // Reply via whisper if command came via whisper
+        await this._sendMinecraftChat(response.message, request.senderId);
       } else {
-        // Direct response to sender
-        try {
-          this.bot.chat(response.message);
-        } catch (e) {
-          // ignore
-        }
+        // Direct response to public chat
+        await this._sendMinecraftChat(response.message);
       }
 
       eventBus.emit('log:entry', {
@@ -273,6 +298,126 @@ class MessageRouter {
         message: `[REST:${request.senderId}] ${response.message}`
       });
     }
+  }
+
+  /**
+   * Health heartbeat check for AIBrain.
+   * @returns {{ ok: boolean, isQuietMode: boolean }}
+   */
+  ping() {
+    return {
+      ok: true,
+      isQuietMode: Boolean(this.isQuietMode)
+    };
+  }
+
+  /**
+   * Records an entry into the in-memory activity timeline.
+   * @param {Object} entry
+   */
+  recordTimeline(entry) {
+    if (!this.timeline) this.timeline = [];
+    const item = {
+      id: `tl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: entry.timestamp || new Date().toISOString(),
+      type: entry.type || 'NOTIFICATION',
+      level: entry.level || 'INFO',
+      message: entry.message || '',
+      user: entry.user || null,
+      channel: entry.channel || 'all',
+      metadata: entry.metadata || {}
+    };
+    this.timeline.push(item);
+    // Keep last 1000 items in memory
+    if (this.timeline.length > 1000) {
+      this.timeline.shift();
+    }
+    return item;
+  }
+
+  /**
+   * Searches timeline items by query, type, or level.
+   * @param {Object} filters
+   * @returns {Array}
+   */
+  searchTimeline(filters = {}) {
+    if (!this.timeline) this.timeline = [];
+    const { query, level, type, limit = 50 } = filters;
+    let results = this.timeline;
+
+    if (level) {
+      results = results.filter(i => i.level.toUpperCase() === level.toUpperCase());
+    }
+    if (type) {
+      results = results.filter(i => i.type.toLowerCase() === type.toLowerCase());
+    }
+    if (query) {
+      const q = query.toLowerCase();
+      results = results.filter(i => 
+        i.message.toLowerCase().includes(q) ||
+        (i.user && i.user.toLowerCase().includes(q))
+      );
+    }
+
+    return results.slice(-limit);
+  }
+
+  /**
+   * Exports the activity timeline as JSON or CSV format.
+   * @param {'json'|'csv'} format
+   * @returns {string}
+   */
+  exportTimeline(format = 'json') {
+    if (!this.timeline) this.timeline = [];
+    if (format === 'csv') {
+      const headers = ['id', 'timestamp', 'type', 'level', 'user', 'message'];
+      const rows = this.timeline.map(t => 
+        [t.id, t.timestamp, t.type, t.level, t.user || '', `"${(t.message || '').replace(/"/g, '""')}"`].join(',')
+      );
+      return [headers.join(','), ...rows].join('\n');
+    }
+    return JSON.stringify(this.timeline, null, 2);
+  }
+
+  /**
+   * Sends owner-targeted status updates (confirmations, errors, progress, completions).
+   * @param {'confirm'|'error'|'progress'|'complete'} type
+   * @param {string} text
+   * @param {Object} [meta={}]
+   */
+  async notifyOwner(type, text, meta = {}) {
+    const prefixes = {
+      confirm: '✅ [Confirm]',
+      error: '❌ [Error]',
+      progress: '⏳ [Progress]',
+      complete: '🎉 [Complete]'
+    };
+    const prefix = prefixes[type] || '[Notice]';
+    const message = `${prefix} ${text}`;
+
+    this.recordTimeline({
+      type: `OWNER_${type.toUpperCase()}`,
+      level: type === 'error' ? 'ERROR' : 'INFO',
+      message: text,
+      user: this.ownerUsername,
+      metadata: meta
+    });
+
+    if (this.bot && typeof this.bot.whisper === 'function' && this.ownerUsername) {
+      try {
+        this.bot.whisper(this.ownerUsername, `[Argus] ${message}`);
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    eventBus.emit('log:entry', {
+      severity: type === 'error' ? 'ERROR' : 'INFO',
+      category: 'OWNER_COMM',
+      message: `<Whisper:${this.ownerUsername}> ${message}`
+    });
+
+    return true;
   }
 }
 

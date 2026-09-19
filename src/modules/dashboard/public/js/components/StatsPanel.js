@@ -1,7 +1,8 @@
 /**
- * StatsPanel Component
+ * StatsPanel Component (Redesigned)
  * Displays real-time operational telemetry for Forestry, Combat & Base Defense,
- * Crafting & Smelting, Building & Construction, and Warehouse & Logistics.
+ * Crafting & Smelting, Building & Construction, Warehouse & Logistics, and Ambient Homestead.
+ * Renders real persisted and live streamed data with Obsidian Glassmorphism styling.
  */
 class StatsPanel {
   constructor(containerId) {
@@ -10,6 +11,8 @@ class StatsPanel {
       logsCollected: 0,
       treesCut: 0,
       saplingsPlanted: 0,
+      applesCollected: 0,
+      skippedTrees: 0,
       currentTarget: 'None',
       targetQuantity: null,
       lastSkipReason: 'None',
@@ -18,6 +21,9 @@ class StatsPanel {
 
     this.combat = {
       mobsDefeated: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+      deaths: 0,
       currentTarget: 'None',
       targetQuantity: null,
       mode: 'Idle',
@@ -29,6 +35,7 @@ class StatsPanel {
     this.crafting = {
       itemsCrafted: 0,
       itemsSmelted: 0,
+      recipesResolved: 0,
       currentItem: 'None',
       targetQuantity: null,
       action: 'Idle',
@@ -39,6 +46,7 @@ class StatsPanel {
     this.building = {
       structuresBuilt: 0,
       blocksPlaced: 0,
+      scaffoldingUsed: 0,
       currentStructure: 'None',
       targetBlocks: null,
       material: 'cobblestone',
@@ -51,6 +59,7 @@ class StatsPanel {
       chestsIndexed: 0,
       itemsSorted: 0,
       itemsCataloged: 0,
+      kitsRestocked: 0,
       lastKit: 'None',
       status: 'Idle',
       lastStatus: 'Ready'
@@ -72,365 +81,391 @@ class StatsPanel {
 
     const forestryProgress = this.forestry.targetQuantity
       ? `${this.forestry.logsCollected} / ${this.forestry.targetQuantity} logs`
-      : `${this.forestry.logsCollected} logs`;
+      : `${this.forestry.logsCollected} logs collected`;
 
     const combatProgress = this.combat.targetQuantity
       ? `${this.combat.mobsDefeated} / ${this.combat.targetQuantity} targets`
-      : `${this.combat.mobsDefeated} targets`;
+      : `${this.combat.mobsDefeated} mobs eliminated`;
 
     const craftingProgress = this.crafting.targetQuantity
       ? `${(this.crafting.action === 'Smelt' ? this.crafting.itemsSmelted : this.crafting.itemsCrafted)} / ${this.crafting.targetQuantity} ${this.crafting.currentItem}`
-      : `${this.crafting.itemsCrafted} crafted / ${this.crafting.itemsSmelted} smelted`;
+      : `${this.crafting.itemsCrafted} crafted • ${this.crafting.itemsSmelted} smelted`;
 
     const buildingProgress = this.building.targetBlocks
       ? `${this.building.blocksPlaced} / ${this.building.targetBlocks} blocks (${this.building.progressPercent}%)`
       : `${this.building.blocksPlaced} blocks placed`;
 
-    const logisticsProgress = `${this.logistics.itemsSorted} items sorted • ${this.logistics.itemsCataloged} cataloged`;
+    const logisticsProgress = `${this.logistics.itemsSorted} items sorted • ${this.logistics.chestsIndexed} chests indexed`;
 
     this.container.innerHTML = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+
         <!-- Forestry Telemetry Card -->
-        <div class="panel" style="background: #1a1e29; border-radius: 8px; padding: 16px; border: 1px solid #2f3640;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 14px; color: #70a1ff; display: flex; align-items: center; gap: 8px;">
-              🌲 Forestry Telemetry
-            </h3>
-            <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${this.forestry.status === 'Active' ? '#2ed573' : '#747d8c'}; color: #fff;">
-              ${this.forestry.status}
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <h3 class="card-title" style="color: var(--accent-emerald);">Forestry Telemetry</h3>
+            <span class="badge ${this.forestry.status === 'Active' ? 'badge-online' : 'badge-offline'}">
+              <span class="badge-dot"></span>
+              <span>${this.forestry.status}</span>
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">LOGS COLLECTED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #2ed573;">${this.forestry.logsCollected}</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px;">
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">LOGS COLLECTED</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-emerald); margin-top: 2px;">${this.forestry.logsCollected}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">TREES CUT</div>
-              <div style="font-size: 16px; font-weight: bold; color: #70a1ff;">${this.forestry.treesCut}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">TREES CUT</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-cyan); margin-top: 2px;">${this.forestry.treesCut}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">SAPLINGS PLANTED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #ffa502;">${this.forestry.saplingsPlanted}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">SAPLINGS PLANTED</div>
+              <div style="font-size: 18px; font-weight: 600; color: var(--accent-amber); margin-top: 2px;">${this.forestry.saplingsPlanted}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">TARGET SPECIES</div>
-              <div style="font-size: 13px; font-weight: 600; color: #eccc68; margin-top: 2px;">${this.forestry.currentTarget}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">TARGET SPECIES</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.forestry.currentTarget}</div>
             </div>
           </div>
 
-          <div style="margin-top: 8px; font-size: 11px; background: #242936; padding: 6px 10px; border-radius: 6px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-              <span style="color: #a4b0be;">Progress:</span>
-              <span style="font-weight: 600; color: #fff;">${forestryProgress}</span>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-muted);">Progress:</span>
+              <span style="font-weight: 600; color: var(--text-main); font-family: var(--font-mono);">${forestryProgress}</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: #a4b0be;">Last Skip:</span>
-              <span style="color: #ff6b81; font-style: italic; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.forestry.lastSkipReason}">
-                ${this.forestry.lastSkipReason}
-              </span>
+              <span style="color: var(--text-muted);">Last Status:</span>
+              <span style="color: var(--accent-emerald); font-style: italic; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.forestry.lastSkipReason}</span>
             </div>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm" style="background: #2ed573; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('chop trees')">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" style="background: rgba(46, 213, 115, 0.15); color: var(--accent-emerald); border: 1px solid rgba(46, 213, 115, 0.3);" onclick="window.dashboard.quickFillCommand('chop trees')">
               Chop Trees
             </button>
-            <button type="button" class="btn btn-sm" style="background: #3742fa; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('cut 64 oak logs')">
+            <button type="button" class="btn btn-sm" style="background: rgba(112, 161, 255, 0.15); color: var(--accent-cyan); border: 1px solid rgba(112, 161, 255, 0.3);" onclick="window.dashboard.quickFillCommand('cut 64 oak logs')">
               64 Oak Logs
             </button>
           </div>
         </div>
 
         <!-- Combat & Defense Telemetry Card -->
-        <div class="panel" style="background: #1a1e29; border-radius: 8px; padding: 16px; border: 1px solid #2f3640;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 14px; color: #ff4757; display: flex; align-items: center; gap: 8px;">
-              ⚔️ Combat & Defense
-            </h3>
-            <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${this.combat.status === 'Engaged' ? '#ff4757' : (this.combat.status === 'Guarding' ? '#ffa502' : '#747d8c')}; color: #fff;">
-              ${this.combat.status}
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <h3 class="card-title" style="color: var(--accent-rose);">Combat & Defense</h3>
+            <span class="badge ${this.combat.status === 'Engaged' ? 'badge-auth' : (this.combat.status === 'Guarding' ? 'badge' : 'badge-offline')}" style="${this.combat.status === 'Engaged' ? 'background: rgba(255, 71, 87, 0.2); color: var(--accent-rose); border-color: rgba(255, 71, 87, 0.4);' : ''}">
+              <span class="badge-dot" style="${this.combat.status === 'Engaged' ? 'background: var(--accent-rose);' : ''}"></span>
+              <span>${this.combat.status}</span>
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">MOBS ELIMINATED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #ff4757;">${this.combat.mobsDefeated}</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px;">
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">MOBS ELIMINATED</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-rose); margin-top: 2px;">${this.combat.mobsDefeated}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">STRIKES LANDED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #70a1ff;">${this.combat.hitsDealt}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">DAMAGE DEALT</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-cyan); margin-top: 2px;">${this.combat.damageDealt || this.combat.hitsDealt}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">COMBAT MODE</div>
-              <div style="font-size: 13px; font-weight: 600; color: #eccc68; margin-top: 2px;">${this.combat.mode}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">COMBAT MODE</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-amber); margin-top: 4px;">${this.combat.mode}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">CURRENT THREAT</div>
-              <div style="font-size: 13px; font-weight: 600; color: #ff6b81; margin-top: 2px;">${this.combat.currentTarget}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">CURRENT THREAT</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-rose); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.combat.currentTarget}</div>
             </div>
           </div>
 
-          <div style="margin-top: 8px; font-size: 11px; background: #242936; padding: 6px 10px; border-radius: 6px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-              <span style="color: #a4b0be;">Progress:</span>
-              <span style="font-weight: 600; color: #fff;">${combatProgress}</span>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-muted);">Progress:</span>
+              <span style="font-weight: 600; color: var(--text-main); font-family: var(--font-mono);">${combatProgress}</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: #a4b0be;">Latest Alert:</span>
-              <span style="color: #2ed573; font-style: italic; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.combat.lastAlert}">
-                ${this.combat.lastAlert}
-              </span>
+              <span style="color: var(--text-muted);">Latest Alert:</span>
+              <span style="color: var(--accent-emerald); font-style: italic; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.combat.lastAlert}</span>
             </div>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm" style="background: #ff4757; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('clear hostiles')">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" style="background: rgba(255, 71, 87, 0.15); color: var(--accent-rose); border: 1px solid rgba(255, 71, 87, 0.3);" onclick="window.dashboard.quickFillCommand('clear hostiles')">
               Clear Hostiles
             </button>
-            <button type="button" class="btn btn-sm" style="background: #ffa502; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('protect me')">
+            <button type="button" class="btn btn-sm" style="background: rgba(255, 165, 2, 0.15); color: var(--accent-amber); border: 1px solid rgba(255, 165, 2, 0.3);" onclick="window.dashboard.quickFillCommand('protect me')">
               Protect Me
             </button>
-            <button type="button" class="btn btn-sm" style="background: #5352ed; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('patrol base')">
+            <button type="button" class="btn btn-sm" style="background: rgba(112, 161, 255, 0.15); color: var(--accent-cyan); border: 1px solid rgba(112, 161, 255, 0.3);" onclick="window.dashboard.quickFillCommand('patrol base')">
               Patrol Base
             </button>
           </div>
         </div>
 
         <!-- Crafting & Smelting Telemetry Card -->
-        <div class="panel" style="background: #1a1e29; border-radius: 8px; padding: 16px; border: 1px solid #2f3640;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 14px; color: #eccc68; display: flex; align-items: center; gap: 8px;">
-              🔨 Crafting & Smelting
-            </h3>
-            <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${this.crafting.status === 'Active' ? '#2ed573' : (this.crafting.status === 'Smelting' ? '#ffa502' : '#747d8c')}; color: #fff;">
-              ${this.crafting.status}
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <h3 class="card-title" style="color: var(--accent-amber);">Crafting & Smelting</h3>
+            <span class="badge ${this.crafting.status === 'Active' ? 'badge-online' : 'badge-offline'}">
+              <span class="badge-dot"></span>
+              <span>${this.crafting.status}</span>
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">ITEMS CRAFTED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #2ed573;">${this.crafting.itemsCrafted}</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px;">
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">ITEMS CRAFTED</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-emerald); margin-top: 2px;">${this.crafting.itemsCrafted}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">ITEMS SMELTED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #ffa502;">${this.crafting.itemsSmelted}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">ITEMS SMELTED</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-amber); margin-top: 2px;">${this.crafting.itemsSmelted}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">ACTION</div>
-              <div style="font-size: 13px; font-weight: 600; color: #70a1ff; margin-top: 2px;">${this.crafting.action}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">ACTION</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-cyan); margin-top: 4px;">${this.crafting.action}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">CURRENT ITEM</div>
-              <div style="font-size: 13px; font-weight: 600; color: #eccc68; margin-top: 2px;">${this.crafting.currentItem}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">RECIPES RESOLVED</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 4px;">${this.crafting.recipesResolved || 0}</div>
             </div>
           </div>
 
-          <div style="margin-top: 8px; font-size: 11px; background: #242936; padding: 6px 10px; border-radius: 6px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-              <span style="color: #a4b0be;">Progress:</span>
-              <span style="font-weight: 600; color: #fff;">${craftingProgress}</span>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-muted);">Overview:</span>
+              <span style="font-weight: 600; color: var(--text-main); font-family: var(--font-mono);">${craftingProgress}</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: #a4b0be;">Latest Status:</span>
-              <span style="color: #2ed573; font-style: italic; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.crafting.lastResult}">
-                ${this.crafting.lastResult}
-              </span>
+              <span style="color: var(--text-muted);">Latest Result:</span>
+              <span style="color: var(--accent-emerald); font-style: italic; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.crafting.lastResult}</span>
             </div>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm" style="background: #2ed573; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('craft stone pickaxe')">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" style="background: rgba(46, 213, 115, 0.15); color: var(--accent-emerald); border: 1px solid rgba(46, 213, 115, 0.3);" onclick="window.dashboard.quickFillCommand('craft stone pickaxe')">
               Stone Pickaxe
             </button>
-            <button type="button" class="btn btn-sm" style="background: #ffa502; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('craft 16 torches')">
+            <button type="button" class="btn btn-sm" style="background: rgba(255, 165, 2, 0.15); color: var(--accent-amber); border: 1px solid rgba(255, 165, 2, 0.3);" onclick="window.dashboard.quickFillCommand('craft 16 torches')">
               16 Torches
             </button>
-            <button type="button" class="btn btn-sm" style="background: #ff4757; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('smelt 8 raw iron')">
+            <button type="button" class="btn btn-sm" style="background: rgba(112, 161, 255, 0.15); color: var(--accent-cyan); border: 1px solid rgba(112, 161, 255, 0.3);" onclick="window.dashboard.quickFillCommand('smelt 8 raw iron')">
               Smelt Iron
-            </button>
-            <button type="button" class="btn btn-sm" style="background: #5352ed; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('craft crafting table')">
-              Craft Table
             </button>
           </div>
         </div>
 
         <!-- Building & Construction Telemetry Card -->
-        <div class="panel" style="background: #1a1e29; border-radius: 8px; padding: 16px; border: 1px solid #2f3640;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 14px; color: #1e90ff; display: flex; align-items: center; gap: 8px;">
-              🏛️ Building & Architecture
-            </h3>
-            <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${this.building.status === 'Active' ? '#2ed573' : '#747d8c'}; color: #fff;">
-              ${this.building.status}
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <h3 class="card-title" style="color: var(--accent-indigo);">Architecture & Construction</h3>
+            <span class="badge ${this.building.status === 'Active' ? 'badge-online' : 'badge-offline'}">
+              <span class="badge-dot"></span>
+              <span>${this.building.status}</span>
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">BLOCKS PLACED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #2ed573;">${this.building.blocksPlaced}</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px;">
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">BLOCKS PLACED</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-emerald); margin-top: 2px;">${this.building.blocksPlaced}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">STRUCTURES BUILT</div>
-              <div style="font-size: 16px; font-weight: bold; color: #1e90ff;">${this.building.structuresBuilt}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">STRUCTURES BUILT</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-indigo); margin-top: 2px;">${this.building.structuresBuilt}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">STRUCTURE TYPE</div>
-              <div style="font-size: 13px; font-weight: 600; color: #eccc68; margin-top: 2px;">${this.building.currentStructure}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">STRUCTURE TYPE</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-amber); margin-top: 4px;">${this.building.currentStructure}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">MATERIAL</div>
-              <div style="font-size: 13px; font-weight: 600; color: #70a1ff; margin-top: 2px;">${this.building.material}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">MATERIAL</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-cyan); margin-top: 4px;">${this.building.material}</div>
             </div>
           </div>
 
-          <div style="margin-top: 8px; font-size: 11px; background: #242936; padding: 6px 10px; border-radius: 6px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-              <span style="color: #a4b0be;">Progress:</span>
-              <span style="font-weight: 600; color: #fff;">${buildingProgress}</span>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-muted);">Progress:</span>
+              <span style="font-weight: 600; color: var(--text-main); font-family: var(--font-mono);">${buildingProgress}</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: #a4b0be;">Status:</span>
-              <span style="color: #2ed573; font-style: italic; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.building.lastStatus}">
-                ${this.building.lastStatus}
-              </span>
+              <span style="color: var(--text-muted);">Status:</span>
+              <span style="color: var(--accent-emerald); font-style: italic; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.building.lastStatus}</span>
             </div>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm" style="background: #2ed573; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('build shelter')">
-              Shelter
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" style="background: rgba(46, 213, 115, 0.15); color: var(--accent-emerald); border: 1px solid rgba(46, 213, 115, 0.3);" onclick="window.dashboard.quickFillCommand('build shelter')">
+              Build Shelter
             </button>
-            <button type="button" class="btn btn-sm" style="background: #1e90ff; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('build wall 10x3 with cobblestone')">
+            <button type="button" class="btn btn-sm" style="background: rgba(99, 102, 241, 0.15); color: var(--accent-indigo); border: 1px solid rgba(99, 102, 241, 0.3);" onclick="window.dashboard.quickFillCommand('build wall 10x3 with cobblestone')">
               10x3 Wall
             </button>
-            <button type="button" class="btn btn-sm" style="background: #ffa502; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('build floor 5x5 with oak_planks')">
+            <button type="button" class="btn btn-sm" style="background: rgba(112, 161, 255, 0.15); color: var(--accent-cyan); border: 1px solid rgba(112, 161, 255, 0.3);" onclick="window.dashboard.quickFillCommand('build floor 5x5 with oak_planks')">
               5x5 Floor
-            </button>
-            <button type="button" class="btn btn-sm" style="background: #5352ed; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('build stairs 5')">
-              Stairs
             </button>
           </div>
         </div>
 
         <!-- Warehouse & Logistics Telemetry Card -->
-        <div class="panel" style="background: #1a1e29; border-radius: 8px; padding: 16px; border: 1px solid #2f3640;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 14px; color: #a55eea; display: flex; align-items: center; gap: 8px;">
-              📦 Warehouse & Logistics
-            </h3>
-            <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${this.logistics.status === 'Active' ? '#2ed573' : '#747d8c'}; color: #fff;">
-              ${this.logistics.status}
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <h3 class="card-title" style="color: var(--accent-purple);">Warehouse & Storage</h3>
+            <span class="badge ${this.logistics.status === 'Active' ? 'badge-online' : 'badge-offline'}">
+              <span class="badge-dot"></span>
+              <span>${this.logistics.status}</span>
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">CHESTS INDEXED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #a55eea;">${this.logistics.chestsIndexed}</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px;">
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">CHESTS INDEXED</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-purple); margin-top: 2px;">${this.logistics.chestsIndexed}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">ITEMS CATALOGED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #2ed573;">${this.logistics.itemsCataloged}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">ITEMS SORTED</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--accent-emerald); margin-top: 2px;">${this.logistics.itemsSorted}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">ITEMS SORTED</div>
-              <div style="font-size: 16px; font-weight: bold; color: #70a1ff;">${this.logistics.itemsSorted}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">KITS RESTOCKED</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-cyan); margin-top: 4px;">${this.logistics.kitsRestocked || 0}</div>
             </div>
-            <div style="background: #242936; padding: 8px 10px; border-radius: 6px;">
-              <div style="color: #a4b0be; font-size: 10px;">LAST KIT</div>
-              <div style="font-size: 13px; font-weight: 600; color: #eccc68; margin-top: 2px;">${this.logistics.lastKit}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-family: var(--font-mono);">LAST KIT</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-amber); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.logistics.lastKit}</div>
             </div>
           </div>
 
-          <div style="margin-top: 8px; font-size: 11px; background: #242936; padding: 6px 10px; border-radius: 6px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-              <span style="color: #a4b0be;">Overview:</span>
-              <span style="font-weight: 600; color: #fff;">${logisticsProgress}</span>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-muted);">Overview:</span>
+              <span style="font-weight: 600; color: var(--text-main); font-family: var(--font-mono);">${logisticsProgress}</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: #a4b0be;">Status:</span>
-              <span style="color: #2ed573; font-style: italic; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.logistics.lastStatus}">
-                ${this.logistics.lastStatus}
-              </span>
+              <span style="color: var(--text-muted);">Status:</span>
+              <span style="color: var(--accent-emerald); font-style: italic; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.logistics.lastStatus}</span>
             </div>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm" style="background: #a55eea; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('sort warehouse')">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.3);" onclick="window.dashboard.quickFillCommand('sort warehouse')">
               Sort Warehouse
             </button>
-            <button type="button" class="btn btn-sm" style="background: #2ed573; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('index chests')">
+            <button type="button" class="btn btn-sm" style="background: rgba(46, 213, 115, 0.15); color: var(--accent-emerald); border: 1px solid rgba(46, 213, 115, 0.3);" onclick="window.dashboard.quickFillCommand('index chests')">
               Index Chests
             </button>
-            <button type="button" class="btn btn-sm" style="background: #ffa502; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('restock miner')">
+            <button type="button" class="btn btn-sm" style="background: rgba(255, 165, 2, 0.15); color: var(--accent-amber); border: 1px solid rgba(255, 165, 2, 0.3);" onclick="window.dashboard.quickFillCommand('restock miner')">
               Restock Miner
-            </button>
-            <button type="button" class="btn btn-sm" style="background: #ff4757; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('restock warrior')">
-              Restock Warrior
             </button>
           </div>
         </div>
 
-        <!-- Ambient & Homestead Routine Card -->
-        <div class="panel" style="background: #1a1e29; border-radius: 8px; padding: 16px; border: 1px solid #2f3640;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 14px; color: #1dd1a1; display: flex; align-items: center; gap: 8px;">
-              🏡 Ambient Homestead Telemetry
-            </h3>
-            <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${this.ambient.enabled ? (this.ambient.status === 'Sleeping' ? '#5f27cd' : '#1dd1a1') : '#747d8c'}; color: #fff;">
-              ${this.ambient.enabled ? this.ambient.status : 'Disabled'}
+        <!-- Ambient Homestead Telemetry Card -->
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header">
+            <h3 class="card-title" style="color: var(--accent-cyan);">Ambient Homestead</h3>
+            <span class="badge ${this.ambient.enabled ? 'badge-online' : 'badge-offline'}">
+              <span class="badge-dot"></span>
+              <span>${this.ambient.enabled ? (this.ambient.status || 'Active') : 'Disabled'}</span>
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; text-align: center;">
-            <div style="background: #242936; padding: 8px; border-radius: 6px;">
-              <div style="font-size: 10px; color: #a4b0be; text-transform: uppercase;">Times Slept</div>
-              <div style="font-size: 16px; font-weight: bold; color: #5f27cd;">${this.ambient.timesSlept}</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; text-align: center;">
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase; font-family: var(--font-mono);">TIMES SLEPT</div>
+              <div style="font-size: 18px; font-weight: 700; color: var(--accent-purple); margin-top: 2px;">${this.ambient.timesSlept}</div>
             </div>
-            <div style="background: #242936; padding: 8px; border-radius: 6px;">
-              <div style="font-size: 10px; color: #a4b0be; text-transform: uppercase;">Items Eaten</div>
-              <div style="font-size: 16px; font-weight: bold; color: #ff9f43;">${this.ambient.itemsEaten}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase; font-family: var(--font-mono);">ITEMS EATEN</div>
+              <div style="font-size: 18px; font-weight: 700; color: var(--accent-amber); margin-top: 2px;">${this.ambient.itemsEaten}</div>
             </div>
-            <div style="background: #242936; padding: 8px; border-radius: 6px;">
-              <div style="font-size: 10px; color: #a4b0be; text-transform: uppercase;">Routine Mode</div>
-              <div style="font-size: 13px; font-weight: 600; color: #1dd1a1; margin-top: 2px;">${this.ambient.enabled ? 'Auto' : 'Off'}</div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase; font-family: var(--font-mono);">MODE</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--accent-cyan); margin-top: 4px;">${this.ambient.enabled ? 'Auto' : 'Off'}</div>
             </div>
           </div>
 
-          <div style="margin-top: 8px; font-size: 11px; background: #242936; padding: 6px 10px; border-radius: 6px;">
+          <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: #a4b0be;">Current Activity:</span>
-              <span style="color: #1dd1a1; font-style: italic; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.ambient.lastActivity}">
-                ${this.ambient.lastActivity}
-              </span>
+              <span style="color: var(--text-muted);">Current Activity:</span>
+              <span style="color: var(--accent-emerald); font-style: italic; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.ambient.lastActivity}</span>
             </div>
           </div>
 
-          <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm" style="background: #1dd1a1; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('enable ambient')">
-              Enable Ambient
-            </button>
-            <button type="button" class="btn btn-sm" style="background: #747d8c; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('disable ambient')">
-              Disable Ambient
-            </button>
-            <button type="button" class="btn btn-sm" style="background: #5f27cd; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('sleep')">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.3);" onclick="window.dashboard.quickFillCommand('sleep')">
               Sleep in Bed
             </button>
-            <button type="button" class="btn btn-sm" style="background: #ff6b6b; color: #fff; font-size: 11px; padding: 3px 6px;" onclick="window.dashboard.quickFillCommand('wake up')">
+            <button type="button" class="btn btn-sm" style="background: rgba(46, 213, 115, 0.15); color: var(--accent-emerald); border: 1px solid rgba(46, 213, 115, 0.3);" onclick="window.dashboard.quickFillCommand('wake up')">
               Wake Up
+            </button>
+            <button type="button" class="btn btn-sm" style="background: rgba(112, 161, 255, 0.15); color: var(--accent-cyan); border: 1px solid rgba(112, 161, 255, 0.3);" onclick="window.dashboard.quickFillCommand('enable ambient')">
+              Enable Routine
             </button>
           </div>
         </div>
+
       </div>
     `;
   }
 
-  // --- Forestry Updates ---
+  // --- Batch Updates from REST Telemetry Sync ---
+  updateForestry(stats) {
+    if (!stats) return;
+    this.forestry.logsCollected = stats.logsCollected ?? this.forestry.logsCollected;
+    this.forestry.treesCut = stats.treesCut ?? this.forestry.treesCut;
+    this.forestry.saplingsPlanted = stats.saplingsPlanted ?? this.forestry.saplingsPlanted;
+    this.forestry.applesCollected = stats.applesCollected ?? this.forestry.applesCollected;
+    this.forestry.skippedTrees = stats.skippedTrees ?? this.forestry.skippedTrees;
+    this.render();
+  }
+
+  updateCombat(stats) {
+    if (!stats) return;
+    this.combat.mobsDefeated = stats.mobsKilled ?? stats.mobsDefeated ?? this.combat.mobsDefeated;
+    this.combat.damageDealt = stats.damageDealt ?? this.combat.damageDealt;
+    this.combat.damageTaken = stats.damageTaken ?? this.combat.damageTaken;
+    this.combat.deaths = stats.deaths ?? this.combat.deaths;
+    this.render();
+  }
+
+  updateCrafting(stats) {
+    if (!stats) return;
+    this.crafting.itemsCrafted = stats.itemsCrafted ?? this.crafting.itemsCrafted;
+    this.crafting.itemsSmelted = stats.itemsSmelted ?? this.crafting.itemsSmelted;
+    this.crafting.recipesResolved = stats.recipesResolved ?? this.crafting.recipesResolved;
+    this.render();
+  }
+
+  updateBuilding(stats) {
+    if (!stats) return;
+    this.building.structuresBuilt = stats.structuresBuilt ?? this.building.structuresBuilt;
+    this.building.blocksPlaced = stats.blocksPlaced ?? this.building.blocksPlaced;
+    this.building.scaffoldingUsed = stats.scaffoldingUsed ?? this.building.scaffoldingUsed;
+    this.render();
+  }
+
+  updateLogistics(stats) {
+    if (!stats) return;
+    this.logistics.chestsIndexed = stats.chestsIndexed ?? this.logistics.chestsIndexed;
+    this.logistics.itemsSorted = stats.itemsSorted ?? this.logistics.itemsSorted;
+    this.logistics.kitsRestocked = stats.kitsRestocked ?? this.logistics.kitsRestocked;
+    this.render();
+  }
+
+  updateAmbient(ambient) {
+    if (!ambient) return;
+    if (ambient.enabled !== undefined) this.ambient.enabled = Boolean(ambient.enabled);
+    if (ambient.status) this.ambient.status = ambient.status;
+    if (ambient.timesSlept !== undefined) this.ambient.timesSlept = ambient.timesSlept;
+    if (ambient.itemsEaten !== undefined) this.ambient.itemsEaten = ambient.itemsEaten;
+    if (ambient.lastActivity) this.ambient.lastActivity = ambient.lastActivity;
+    this.render();
+  }
+
+  // --- Real-Time Stream Event Handlers ---
   updateForestryStarted(data) {
     this.forestry.status = 'Active';
     this.forestry.currentTarget = data.treeFamily || 'any';
@@ -439,14 +474,14 @@ class StatsPanel {
   }
 
   updateLogCut(data) {
-    this.forestry.logsCollected = data.logsCollected;
+    this.forestry.logsCollected = data.logsCollected !== undefined ? data.logsCollected : (this.forestry.logsCollected + 1);
     this.forestry.currentTarget = data.family || this.forestry.currentTarget;
     this.render();
   }
 
   updateTreeCompleted(data) {
-    this.forestry.treesCut = data.treesCut;
-    this.forestry.logsCollected = data.logsCollected;
+    this.forestry.treesCut = data.treesCut !== undefined ? data.treesCut : (this.forestry.treesCut + 1);
+    if (data.logsCollected !== undefined) this.forestry.logsCollected = data.logsCollected;
     this.render();
   }
 
@@ -462,9 +497,9 @@ class StatsPanel {
 
   updateForestryCompleted(data) {
     this.forestry.status = 'Idle';
-    this.forestry.logsCollected = data.logsCollected;
-    this.forestry.treesCut = data.treesCut;
-    this.forestry.saplingsPlanted = data.saplingsPlanted;
+    if (data.logsCollected !== undefined) this.forestry.logsCollected = data.logsCollected;
+    if (data.treesCut !== undefined) this.forestry.treesCut = data.treesCut;
+    if (data.saplingsPlanted !== undefined) this.forestry.saplingsPlanted = data.saplingsPlanted;
     this.render();
   }
 
@@ -487,12 +522,13 @@ class StatsPanel {
 
   updateCombatHit(data) {
     this.combat.hitsDealt++;
+    if (data.damage) this.combat.damageDealt += data.damage;
     this.render();
   }
 
   updateCombatMobKilled(data) {
-    this.combat.mobsDefeated = data.mobsDefeated;
-    this.combat.lastAlert = `Eliminated ${data.mobType}`;
+    this.combat.mobsDefeated = data.mobsDefeated !== undefined ? data.mobsDefeated : (this.combat.mobsDefeated + 1);
+    this.combat.lastAlert = `Eliminated ${data.mobType || 'target'}`;
     this.render();
   }
 
@@ -505,7 +541,7 @@ class StatsPanel {
   updateCombatCompleted(data) {
     this.combat.status = 'Idle';
     this.combat.mode = 'Idle';
-    this.combat.mobsDefeated = data.mobsDefeated;
+    if (data.mobsDefeated !== undefined) this.combat.mobsDefeated = data.mobsDefeated;
     this.combat.currentTarget = 'None';
     this.combat.lastAlert = 'Operation finished';
     this.render();
@@ -523,7 +559,7 @@ class StatsPanel {
 
   updateItemCrafted(data) {
     this.crafting.itemsCrafted += (data.count || 1);
-    this.crafting.lastResult = `Crafted ${data.item}`;
+    this.crafting.lastResult = `Crafted ${data.item || 'item'}`;
     this.render();
   }
 
@@ -538,7 +574,7 @@ class StatsPanel {
 
   updateItemSmelted(data) {
     this.crafting.itemsSmelted += (data.count || 1);
-    this.crafting.lastResult = `Smelted ${data.item}`;
+    this.crafting.lastResult = `Smelted ${data.item || 'item'}`;
     this.render();
   }
 
@@ -557,7 +593,7 @@ class StatsPanel {
     this.building.targetBlocks = data.totalBlocks || null;
     this.building.blocksPlaced = 0;
     this.building.progressPercent = 0;
-    this.building.lastStatus = `Building ${data.structure} (${data.totalBlocks} blocks)`;
+    this.building.lastStatus = `Building ${data.structure} (${data.totalBlocks || 0} blocks)`;
     this.render();
   }
 
@@ -566,14 +602,14 @@ class StatsPanel {
     if (data.percent !== undefined) {
       this.building.progressPercent = data.percent;
     }
-    this.building.lastStatus = `Placed ${data.blockType} (${data.progress || ''})`;
+    this.building.lastStatus = `Placed ${data.blockType || 'block'} (${data.progress || ''})`;
     this.render();
   }
 
   updateBuildingCompleted(data) {
     this.building.status = 'Idle';
     this.building.structuresBuilt++;
-    this.building.blocksPlaced = data.blocksPlaced || this.building.blocksPlaced;
+    if (data.blocksPlaced !== undefined) this.building.blocksPlaced = data.blocksPlaced;
     this.building.progressPercent = 100;
     this.building.lastStatus = `Finished ${data.structure || 'structure'}`;
     this.render();
@@ -589,16 +625,16 @@ class StatsPanel {
   updateChestIndexed(data) {
     this.logistics.chestsIndexed++;
     this.logistics.itemsCataloged += (data.itemCount || 0);
-    this.logistics.lastStatus = `Indexed ${data.label} (${data.itemCount} items)`;
+    this.logistics.lastStatus = `Indexed ${data.label || 'chest'} (${data.itemCount || 0} items)`;
     this.render();
   }
 
   updateItemTransferred(data) {
     if (data.action === 'deposit') {
       this.logistics.itemsSorted += (data.count || 0);
-      this.logistics.lastStatus = `Sorted ${data.count} items into ${data.category}`;
+      this.logistics.lastStatus = `Sorted ${data.count || 0} items into ${data.category || 'storage'}`;
     } else {
-      this.logistics.lastStatus = `Retrieved ${data.count}x ${data.item}`;
+      this.logistics.lastStatus = `Retrieved ${data.count || 0}x ${data.item || 'item'}`;
     }
     this.render();
   }
@@ -607,6 +643,7 @@ class StatsPanel {
     this.logistics.status = 'Idle';
     if (data.mode === 'restock' && data.result) {
       this.logistics.lastKit = data.result.kitName || 'default';
+      this.logistics.kitsRestocked++;
     }
     this.logistics.lastStatus = `Logistics task finished [${(data.mode || '').toUpperCase()}]`;
     this.render();

@@ -28,9 +28,14 @@ class ToolService {
   async equipBest(toolType, autoCraft = false) {
     let bestTool = this.getBestTool(toolType);
     if (!bestTool && autoCraft && this.ctx && this.ctx.crafting) {
-      const fallbackTool = `stone_${toolType}`;
-      await this.ctx.crafting.autoCraftMissing(fallbackTool, 1);
-      bestTool = this.getBestTool(toolType);
+      const fallbackTools = [`iron_${toolType}`, `stone_${toolType}`, `wooden_${toolType}`];
+      for (const tool of fallbackTools) {
+        try {
+          await this.ctx.crafting.autoCraftMissing(tool, 1);
+          bestTool = this.getBestTool(toolType);
+          if (bestTool) break;
+        } catch (e) {}
+      }
     }
     if (!bestTool) {
       return null;
@@ -288,6 +293,115 @@ class ToolService {
     }
 
     return enchants;
+  }
+
+  /**
+   * Autonomous Idle Tool Maintenance & Upgrade Engine.
+   * Scans the bot's inventory for tool gaps, durability wear, and upgrade opportunities.
+   * Crafts superior tool tiers (e.g. wood -> stone -> iron -> diamond) and organizes hotbar.
+   * 
+   * @returns {Promise<{ upgraded: boolean, tool?: string, reason?: string }>}
+   */
+  async maintainAndUpgradeTools() {
+    if (!this.bot || !this.bot.inventory || !this.ctx || !this.ctx.crafting) {
+      return { upgraded: false };
+    }
+
+    const count = (name) => {
+      if (this.ctx.inv && typeof this.ctx.inv.countItem === 'function') {
+        return this.ctx.inv.countItem(name);
+      }
+      return this.bot.inventory.items()
+        .filter((i) => i && i.name && (i.name === name || i.name.endsWith(`_${name}`)))
+        .reduce((sum, i) => sum + (i.count || 1), 0);
+    };
+
+    const diamonds = count('diamond');
+    const ironIngots = count('iron_ingot');
+    const cobblestone = count('cobblestone');
+    const planks = count('planks');
+    const logs = count('log');
+
+    // Tool categories to maintain in priority order: pickaxe, axe, sword, shovel
+    const toolCategories = [
+      { type: 'pickaxe', reqDiamond: 3, reqIron: 3, reqCobble: 3, reqPlanks: 3 },
+      { type: 'axe', reqDiamond: 3, reqIron: 3, reqCobble: 3, reqPlanks: 3 },
+      { type: 'sword', reqDiamond: 2, reqIron: 2, reqCobble: 2, reqPlanks: 2 },
+      { type: 'shovel', reqDiamond: 1, reqIron: 1, reqCobble: 1, reqPlanks: 1 }
+    ];
+
+    for (const cat of toolCategories) {
+      const current = this.getBestTool(cat.type);
+      const material = current ? this._extractMaterial(current.name) : 'none';
+      const tier = current ? (toolTiers[material] || 1) : 0;
+      const isDamaged = current ? this.isAboutToBreak(current, 20) : false;
+
+      // 1. Upgrade to Diamond (Tier 4)
+      if ((tier < 4 || isDamaged) && diamonds >= cat.reqDiamond) {
+        const targetTool = `diamond_${cat.type}`;
+        if (current && current.name === targetTool && !isDamaged) continue;
+        const crafted = await this.ctx.crafting.autoCraftMissing(targetTool, 1);
+        if (crafted) {
+          if (this.ctx.inv && typeof this.ctx.inv.organizeHotbar === 'function') {
+            try { await this.ctx.inv.organizeHotbar(); } catch (e) {}
+          }
+          return { upgraded: true, tool: targetTool, reason: isDamaged ? 'replacement' : 'tier_upgrade' };
+        }
+      }
+
+      // 2. Upgrade to Iron (Tier 3)
+      if ((tier < 3 || isDamaged) && ironIngots >= cat.reqIron) {
+        const targetTool = `iron_${cat.type}`;
+        if (current && current.name === targetTool && !isDamaged) continue;
+        const crafted = await this.ctx.crafting.autoCraftMissing(targetTool, 1);
+        if (crafted) {
+          if (this.ctx.inv && typeof this.ctx.inv.organizeHotbar === 'function') {
+            try { await this.ctx.inv.organizeHotbar(); } catch (e) {}
+          }
+          return { upgraded: true, tool: targetTool, reason: isDamaged ? 'replacement' : 'tier_upgrade' };
+        }
+      }
+
+      // 3. Upgrade to Stone (Tier 2)
+      if ((tier < 2 || isDamaged) && cobblestone >= cat.reqCobble) {
+        const targetTool = `stone_${cat.type}`;
+        if (current && current.name === targetTool && !isDamaged) continue;
+        const crafted = await this.ctx.crafting.autoCraftMissing(targetTool, 1);
+        if (crafted) {
+          if (this.ctx.inv && typeof this.ctx.inv.organizeHotbar === 'function') {
+            try { await this.ctx.inv.organizeHotbar(); } catch (e) {}
+          }
+          return { upgraded: true, tool: targetTool, reason: isDamaged ? 'replacement' : 'tier_upgrade' };
+        }
+      }
+
+      // 4. Basic Wood Tool (Tier 1) if bot has NO tool of this type
+      if (tier < 1 && (planks >= cat.reqPlanks || logs >= 1)) {
+        const targetTool = `wooden_${cat.type}`;
+        const crafted = await this.ctx.crafting.autoCraftMissing(targetTool, 1);
+        if (crafted) {
+          if (this.ctx.inv && typeof this.ctx.inv.organizeHotbar === 'function') {
+            try { await this.ctx.inv.organizeHotbar(); } catch (e) {}
+          }
+          return { upgraded: true, tool: targetTool, reason: 'missing_tool' };
+        }
+      }
+    }
+
+    // 5. Shield Crafting & Equipping if missing
+    const hasShield = this.bot.inventory.items().some((i) => i && i.name === 'shield');
+    if (!hasShield && ironIngots >= 1 && (planks >= 6 || logs >= 2)) {
+      const crafted = await this.ctx.crafting.autoCraftMissing('shield', 1);
+      if (crafted) {
+        const shieldItem = this.bot.inventory.items().find((i) => i && i.name === 'shield');
+        if (shieldItem && typeof this.bot.equip === 'function') {
+          try { await this.bot.equip(shieldItem, 'off-hand'); } catch (e) {}
+        }
+        return { upgraded: true, tool: 'shield', reason: 'defense' };
+      }
+    }
+
+    return { upgraded: false };
   }
 
   /**

@@ -590,6 +590,18 @@ class ServerAuthManager {
 
     return false;
   }
+
+  /**
+   * Health heartbeat check for AIBrain.
+   * @returns {{ ok: boolean, status: string, plugin: string|null }}
+   */
+  ping() {
+    return {
+      ok: true,
+      status: this.authStatus,
+      plugin: this.detectedPlugin
+    };
+  }
 }
 
 module.exports = new ServerAuthManager();

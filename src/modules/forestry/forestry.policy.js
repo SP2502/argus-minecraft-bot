@@ -20,7 +20,10 @@ module.exports = {
     }
 
     if (!treeAnalysis.safe) {
-      return { shouldPreserve: true, reason: treeAnalysis.warnings.join('; ') || 'Tree marked unsafe' };
+      const reason = (treeAnalysis.warnings && treeAnalysis.warnings.length > 0)
+        ? treeAnalysis.warnings.join('; ')
+        : (treeAnalysis.naturalEvidence && treeAnalysis.naturalEvidence.reason) || 'Tree marked unsafe';
+      return { shouldPreserve: true, reason };
     }
 
     if (!treeAnalysis.naturalEvidence || !treeAnalysis.naturalEvidence.isNatural) {

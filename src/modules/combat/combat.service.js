@@ -320,6 +320,154 @@ class CombatHelperService {
       nearbyThreats: this.findNearbyThreats(10).length
     };
   }
+
+  /**
+   * Attacks a specific entity with sprint-jump critical hits until it is dead or flees.
+   * @param {import('mineflayer').Entity} targetEntity
+   * @returns {Promise<boolean>} True if target was killed
+   */
+  async attackTarget(targetEntity) {
+    if (!targetEntity || !targetEntity.position) return false;
+    if (this.isAlly(targetEntity)) {
+      console.warn('[CombatHelperService] Refusing to attack ally:', targetEntity.username || targetEntity.name);
+      return false;
+    }
+
+    await this.equipBestWeapon();
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      const stillAlive = targetEntity.isValid && !(targetEntity.metadata && targetEntity.metadata[7] <= 0);
+      if (!stillAlive) break;
+
+      const botPos = this.bot.entity ? this.bot.entity.position : null;
+      if (!botPos) break;
+
+      const dist = typeof botPos.distanceTo === 'function'
+        ? botPos.distanceTo(targetEntity.position) : 5;
+
+      // Navigate closer if out of melee range
+      if (dist > 3.0 && this.ctx && this.ctx.nav) {
+        try {
+          await this.ctx.nav.goTo(targetEntity.position, { range: 2.5, timeoutMs: 2000, allowBreak: false });
+        } catch (e) {}
+      }
+
+      // Sprint-jump critical hit
+      if (typeof this.bot.setControlState === 'function') {
+        this.bot.setControlState('sprint', true);
+        this.bot.setControlState('jump', true);
+        await new Promise((r) => setTimeout(r, 80));
+        this.bot.setControlState('jump', false);
+      }
+
+      if (typeof this.bot.lookAt === 'function') {
+        try {
+          await this.bot.lookAt(targetEntity.position.offset(0, targetEntity.height ? targetEntity.height * 0.8 : 1.4, 0));
+        } catch (e) {}
+      }
+
+      if (typeof this.bot.attack === 'function') {
+        this.bot.attack(targetEntity);
+        if (this.ctx && this.ctx.events) {
+          this.ctx.events.emit('combat.hit', { target: targetEntity.name, mode: 'hunt' });
+        }
+      }
+
+      if (typeof this.bot.setControlState === 'function') {
+        this.bot.setControlState('sprint', false);
+      }
+
+      await new Promise((r) => setTimeout(r, 550)); // 1.9+ attack speed cooldown
+    }
+
+    const killed = !targetEntity.isValid || (targetEntity.metadata && targetEntity.metadata[7] <= 0);
+    if (killed) {
+      await this.collectNearbyDrops();
+    }
+    return killed;
+  }
+
+  /**
+   * Sweeps the surrounding area and kills all matching hostile mobs.
+   * Respects whitelist — never attacks the owner or allies.
+   * @param {string} [targetMob='any'] - Mob type to kill, or 'any' for all hostiles
+   * @param {number} [radius=24] - Search radius in blocks
+   * @param {number} [maxKills=20] - Max number of mobs to kill in one sweep
+   * @returns {Promise<number>} Number of mobs killed
+   */
+  async huntAndKill(targetMob = 'any', radius = 24, maxKills = 20) {
+    const combatPolicies = require('./combat.policy');
+    let killed = 0;
+
+    for (let i = 0; i < maxKills; i++) {
+      if (!this.bot || !this.bot.entities) break;
+      const botPos = this.bot.entity ? this.bot.entity.position : null;
+      if (!botPos) break;
+
+      // Find nearest matching target
+      let target = null;
+      let closestDist = radius;
+
+      for (const entity of Object.values(this.bot.entities)) {
+        if (!entity || !entity.position || entity.isValid === false) continue;
+        if (this.isAlly(entity)) continue;
+        if (!combatPolicies.isHostile(entity, targetMob)) continue;
+
+        const d = typeof botPos.distanceTo === 'function'
+          ? botPos.distanceTo(entity.position)
+          : Math.sqrt(Math.pow(botPos.x - entity.position.x, 2) + Math.pow(botPos.z - entity.position.z, 2));
+
+        if (d < closestDist) {
+          closestDist = d;
+          target = entity;
+        }
+      }
+
+      if (!target) break;
+
+      if (this.ctx && this.ctx.messageRouter && i === 0) {
+        this.ctx.messageRouter.send(3, `⚔️ Engaging ${target.name} (${Math.round(closestDist)}m away)...`);
+      }
+
+      const wasKilled = await this.attackTarget(target);
+      if (wasKilled) killed++;
+
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    return killed;
+  }
+
+  /**
+   * Collects all nearby dropped items on the ground within 8 blocks after combat.
+   * @returns {Promise<void>}
+   */
+  async collectNearbyDrops() {
+    if (!this.bot || !this.bot.entities) return;
+    const botPos = this.bot.entity ? this.bot.entity.position : null;
+    if (!botPos) return;
+
+    for (const entity of Object.values(this.bot.entities)) {
+      if (!entity || !entity.position) continue;
+      if (entity.type !== 'object' && entity.objectType !== 'Item') continue;
+
+      const d = typeof botPos.distanceTo === 'function'
+        ? botPos.distanceTo(entity.position) : 99;
+      if (d > 8) continue;
+
+      // Walk to the drop
+      if (d > 1.5 && this.ctx && this.ctx.nav) {
+        try {
+          await this.ctx.nav.goTo(entity.position, { range: 1, timeoutMs: 2000, allowBreak: false });
+        } catch (e) {}
+      }
+      // Small delay to allow auto-pickup
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
 }
 
 module.exports = CombatHelperService;

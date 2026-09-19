@@ -21,8 +21,10 @@ function createSafeMovements(bot) {
   // Default safety constraints
   movements.canDig = false; // Do not break blocks by default unless explicitly permitted
   movements.allow1by1towers = false;
-  movements.allowParkour = true;
+  movements.allowParkour = true;       // Enable parkour gap-jumping
+  movements.allowSprinting = true;     // Enable full sprint speed
   movements.allowFreeMotion = false;
+  movements.canJump = true;            // Allow jumping over obstacles
   movements.liquidCost = MovementCosts.WATER;
 
   // Retrieve Minecraft registry data if available

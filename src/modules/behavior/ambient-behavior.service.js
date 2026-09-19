@@ -70,6 +70,10 @@ class AmbientBehaviorService {
     const ate = await this.checkAutoEat();
     if (ate) return true;
 
+    // 2.5 Autonomous Tool Maintenance & Upgrades in Idle
+    const toolUpgraded = await this.checkToolUpgradeRoutine();
+    if (toolUpgraded) return true;
+
     // 3. Ambient Maintenance Tasks (Farming / Warehouse Organization)
     if (idleDurationMs >= ambientConfig.IDLE_TRIGGER_DELAY_MS) {
       const maintenanceTriggered = await this.checkMaintenanceRoutine();
@@ -259,20 +263,76 @@ class AmbientBehaviorService {
 
     // 2. Mature Crop Maintenance -> Autonomous Homestead Harvesting
     if (this.ctx.target && typeof this.ctx.target.findNearestBlock === 'function') {
-      const crop = this.ctx.target.findNearestBlock(['wheat', 'carrots', 'potatoes', 'beetroots'], 24);
-      if (crop && (crop.metadata === 7 || crop.name === 'wheat' && crop.metadata === 7)) {
-        this.ctx.taskManager.addTask(
-          'farm',
-          { mode: 'harvest', opportunistic: true },
-          Priorities.BACKGROUND,
-          'AmbientScheduler',
-          ['movement', 'inventory']
-        );
-        this.lastMaintenanceTime = now;
-        this.stats.maintenanceRuns++;
-        this.stats.lastActivity = 'Tending Farm';
+      const cropBlockNames = ['wheat', 'carrots', 'potatoes', 'beetroots', 'melon', 'pumpkin'];
+      const crop = this.ctx.target.findNearestBlock(cropBlockNames, 32);
+      if (crop) {
+        // MC 1.21+ uses block.getProperties().age; legacy uses block.metadata
+        let cropAge = -1;
+        try {
+          if (typeof crop.getProperties === 'function') {
+            const props = crop.getProperties();
+            cropAge = props && props.age !== undefined ? parseInt(props.age, 10) : (crop.metadata || 0);
+          } else {
+            cropAge = crop.metadata !== undefined ? crop.metadata : -1;
+          }
+        } catch (e) {
+          cropAge = crop.metadata !== undefined ? crop.metadata : -1;
+        }
+
+        // Melon/Pumpkin are always harvestable when present, wheat mature at age 7, others at 3 or 7
+        const isMature = (['melon', 'pumpkin'].includes(crop.name)) ||
+          (cropAge >= 7) ||
+          (crop.name === 'beetroots' && cropAge >= 3);
+
+        if (isMature) {
+          this.ctx.taskManager.addTask(
+            'farm',
+            { targetCrop: crop.name === 'carrots' ? 'carrot' : crop.name === 'potatoes' ? 'potato' : crop.name === 'beetroots' ? 'beetroot' : crop.name, opportunistic: true },
+            Priorities.BACKGROUND,
+            'AmbientScheduler',
+            ['movement', 'inventory']
+          );
+          this.lastMaintenanceTime = now;
+          this.stats.maintenanceRuns++;
+          this.stats.lastActivity = 'Tending Farm';
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Autonomous Idle Tool Maintenance & Upgrades.
+   * Periodically crafts missing tools or upgrades existing tools (wood -> stone -> iron -> diamond).
+   * @returns {Promise<boolean>}
+   */
+  async checkToolUpgradeRoutine() {
+    if (!this.ctx || !this.ctx.tools || typeof this.ctx.tools.maintainAndUpgradeTools !== 'function') {
+      return false;
+    }
+
+    const now = Date.now();
+    if (this.lastToolCheck && now - this.lastToolCheck < 10000) {
+      return false;
+    }
+    this.lastToolCheck = now;
+
+    try {
+      const res = await this.ctx.tools.maintainAndUpgradeTools();
+      if (res && res.upgraded) {
+        this.stats.lastActivity = `Upgraded ${res.tool}`;
+        if (this.ctx.events) {
+          this.ctx.events.emit('ambient.tool_upgraded', res);
+        }
+        if (this.ctx.messageRouter) {
+          this.ctx.messageRouter.send(3, `[Idle Tool Maintenance] Upgraded tools: crafted and equipped ${res.tool}.`);
+        }
         return true;
       }
+    } catch (err) {
+      console.warn('[AmbientBehaviorService] Tool maintenance failed:', err.message);
     }
 
     return false;

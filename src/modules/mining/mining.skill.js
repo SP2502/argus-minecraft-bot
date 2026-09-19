@@ -49,8 +49,24 @@ class MineSkill extends BaseSkill {
         try { await this.ctx.inv.organizeHotbar(); } catch (e) {}
       }
       const hasWaterBucket = this.ctx.inv.hasItem('water_bucket');
-      if (!hasWaterBucket && (targetY < 0 || targetY < 60)) {
+      if (!hasWaterBucket && targetY < 0) {
         throw new SkillAbort('Hazardous mining aborted: Water bucket in slot 6 cannot be guaranteed.');
+      }
+    }
+
+    // Invariant: Verify pickaxe availability before starting mining operation
+    if (this.ctx && this.ctx.tools) {
+      const bestPick = typeof this.ctx.tools.getBestTool === 'function' ? this.ctx.tools.getBestTool('pickaxe') : null;
+      const held = this.ctx.bot ? this.ctx.bot.heldItem : null;
+      const isHolding = held && held.name && held.name.includes('pickaxe');
+      if (!bestPick && !isHolding) {
+        let crafted = null;
+        if (typeof this.ctx.tools.equipBest === 'function') {
+          crafted = await this.ctx.tools.equipBest('pickaxe', true);
+        }
+        if (!crafted) {
+          throw new SkillAbort('Mining aborted: No pickaxe equipped or available in inventory. Stone and ores cannot be harvested bare-handed.');
+        }
       }
     }
 
@@ -92,8 +108,17 @@ class MineSkill extends BaseSkill {
         continue;
       }
 
-      // 4. EQUIP BEST TOOL (Tool Service)
-      await this.ctx.tools.equipBest('pickaxe');
+      // 4. EQUIP BEST TOOL (Tool Service with autoCraft fallback)
+      let equippedPick = null;
+      if (this.ctx && this.ctx.tools && typeof this.ctx.tools.equipBest === 'function') {
+        equippedPick = await this.ctx.tools.equipBest('pickaxe', true);
+      }
+      const held = this.ctx && this.ctx.bot ? this.ctx.bot.heldItem : null;
+      const isHoldingPickaxe = (equippedPick && equippedPick.name && equippedPick.name.includes('pickaxe')) ||
+                               (held && held.name && held.name.includes('pickaxe'));
+      if (this.ctx && this.ctx.tools && !isHoldingPickaxe) {
+        throw new SkillAbort('Mining aborted: No pickaxe equipped or available in inventory. Stone and ores cannot be harvested bare-handed.');
+      }
 
       // 5. MINE BLOCK (Safe digging invariants: never dig straight down or straight up)
       try {

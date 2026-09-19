@@ -52,7 +52,7 @@ class UnifiedCommandGateway {
     request.commandId = commandId;
 
     const rawText = request.message || '';
-    let normalized = rawText.replace(/§[0-9a-fk-or]/gi, '').trim();
+    let normalized = rawText.replace(/§[0-9a-fk-orx]/gi, '').trim();
 
     // 1. Prefix Policy Check
     if (commandPolicies.REQUIRE_PREFIX && commandPolicies.PREFIX) {
@@ -60,6 +60,14 @@ class UnifiedCommandGateway {
         return CommandResponse.info('Ignored: command prefix not present.');
       }
       normalized = normalized.slice(commandPolicies.PREFIX.length).trim();
+    }
+
+    // 1b. Strip Bot Name Callout Prefix (e.g. "Argus status" -> "status")
+    const botName = (this.ctx && this.ctx.bot && this.ctx.bot.username) || process.env.MC_USERNAME || 'Argus';
+    const calloutRegex = new RegExp(`^(?:@?${botName}|@?bot)[,:]?\\s*`, 'i');
+    if (calloutRegex.test(normalized)) {
+      const stripped = normalized.replace(calloutRegex, '').trim();
+      if (stripped.length > 0) normalized = stripped;
     }
 
     // 2. Length Validation
@@ -221,7 +229,9 @@ class UnifiedCommandGateway {
         op.params,
         op.priority || Priorities.AUTONOMOUS,
         request.senderId,
-        op.locks || ['movement', 'inventory']
+        op.locks || ['movement', 'inventory'],
+        op.dependsOn || [],
+        op.operationId || null
       );
 
       taskIds.push(task.id);
@@ -235,9 +245,11 @@ class UnifiedCommandGateway {
     });
 
     const isSequence = plan.operations.length > 1;
-    const msg = isSequence
-      ? `Queued workflow (${plan.operations.length} steps): ${plan.operations.map((o) => o.intentName).join(' ➔ ')}.`
-      : `Queued task [${plan.operations[0].intentName}]: ${JSON.stringify(plan.operations[0].params)}`;
+    const msg = (plan.isIntelligentWorkflow && plan.preparationExplanation)
+      ? plan.preparationExplanation
+      : (isSequence
+        ? `Queued workflow (${plan.operations.length} steps): ${plan.operations.map((o) => o.intentName).join(' ➔ ')}.`
+        : `Queued task [${plan.operations[0].intentName}]: ${JSON.stringify(plan.operations[0].params)}`);
 
     await this.createAudit({
       commandId: request.commandId,
@@ -249,6 +261,13 @@ class UnifiedCommandGateway {
       operations: plan.operations,
       taskIds
     });
+
+    // Immediately trigger runNext if scheduler is idle so bot executes without delay
+    if (this.taskManager && typeof this.taskManager.runNext === 'function') {
+      this.taskManager.runNext().catch((err) => {
+        console.error('[TaskManager] Immediate runNext error:', err.message);
+      });
+    }
 
     return CommandResponse.queued(msg, taskIds);
   }
@@ -375,10 +394,76 @@ class UnifiedCommandGateway {
           `Uptime: ${Math.round(process.uptime())}s. Host: ${process.env.MC_HOST || 'server'}:${process.env.MC_PORT || '25565'}.`
         );
 
-      case 'help':
+      case 'help': {
+        const feature = (op.params && op.params.feature) ? String(op.params.feature).toLowerCase().trim() : null;
+
+        if (feature === 'mine' || feature === 'mining') {
+          return CommandResponse.info(
+            '⛏ MINING HELP:\n' +
+            '• "mine 64 diamonds" - Harvests 64 diamonds\n' +
+            '• "mine 2 stacks iron" - Mines 128 iron ore\n' +
+            '• "mine coal opportunistically" - Gathers coal while digging\n' +
+            '• Invariants: Holds water bucket in slot 6, torches every 8 blocks, never digs straight down.'
+          );
+        }
+
+        if (feature === 'farm' || feature === 'farming') {
+          return CommandResponse.info(
+            '🌾 FARMING HELP:\n' +
+            '• "farm wheat" / "harvest carrots" - Harvests mature crops\n' +
+            '• "farm with bone meal" - Uses bone meal to accelerate\n' +
+            '• Invariants: Preserves 16 seeds, auto-replants farmland.'
+          );
+        }
+
+        if (feature === 'wood' || feature === 'forestry') {
+          return CommandResponse.info(
+            '🪓 FORESTRY HELP:\n' +
+            '• "chop 32 oak trees" - Harvests oak logs\n' +
+            '• "cut birch wood near me" - Chops nearby birch\n' +
+            '• "enable replanting" - Automatically replants saplings'
+          );
+        }
+
+        if (feature === 'combat' || feature === 'fight') {
+          return CommandResponse.info(
+            '⚔ COMBAT HELP:\n' +
+            '• "guard me" - Protects you from hostile mobs\n' +
+            '• "hunt 10 skeletons" - Actively hunts targets\n' +
+            '• "clear hostiles" / "patrol base" - Defensive patrol\n' +
+            '• Invariants: Never attacks passive animals, villagers, or players.'
+          );
+        }
+
+        if (feature === 'build' || feature === 'building') {
+          return CommandResponse.info(
+            '🏗 BUILDING HELP:\n' +
+            '• "build shelter with cobblestone" - Builds enclosed bunker\n' +
+            '• "construct 8x3 wall of stone bricks" - Builds defensive wall\n' +
+            '• "build 5x5 floor of oak planks" - Builds floor foundation'
+          );
+        }
+
+        if (feature === 'safety' || feature === 'survival') {
+          return CommandResponse.info(
+            '🛡 SAFETY HELP:\n' +
+            '• Auto-Eat: Automatically consumes best food to sustain hunger & saturation regeneration\n' +
+            '• Drowning Guard: Auto-surfaces and swims up when oxygen drops <= 12\n' +
+            '• Fire & Lava: Water bucket deployment at feet to douse flames, auto-retrieves water\n' +
+            '• Suffocation: Jump and emergency dig if head is trapped inside solid blocks\n' +
+            '• Projectile Shield: Auto-raises off-hand shield against skeleton/pillager arrows\n' +
+            '• Status: Type "status" or "health" to check health, food, and active tasks'
+          );
+        }
+
         return CommandResponse.info(
-          'Available commands: follow me, stop, guard, coords, status, inventory, mine <ore>, farm <crop>, go to <location>, sort.'
+          '[ARGUS HELP] Commands:\n' +
+          '• Skills: mine <ore>, farm <crop>, chop <tree>, build <structure>, craft <item>\n' +
+          '• Actions: guard me, hunt <mobs>, follow me, stay here, go home, sort, store all\n' +
+          '• Queries: status, health, inv, where are you, list bases, queue, stop all\n' +
+          '• Sub-guides: Type "help safety", "help mining", "help combat", "help farming", "help building"'
         );
+      }
 
       case 'stop':
       case 'pause':
@@ -550,6 +635,17 @@ class UnifiedCommandGateway {
     }
 
     eventBus.emit('command.audit', entry);
+  }
+
+  /**
+   * Health heartbeat check for AIBrain.
+   * @returns {{ ok: boolean, ready: boolean }}
+   */
+  ping() {
+    return {
+      ok: Boolean(this.ctx && this.intentParser && this.taskManager),
+      ready: true
+    };
   }
 }
 

@@ -49,54 +49,136 @@ class CraftingService {
    */
   async craft(itemName, quantity = 1) {
     if (!this.bot || !itemName) return false;
-    const recipe = craftingData.recipes[itemName];
+
+    // Resolve generic wood aliases to the actual type currently in inventory
+    const resolvedName = this._resolveWoodAlias(itemName);
+    console.log(`[CraftingService] craft('${itemName}') resolved to '${resolvedName}', quantity=${quantity}`);
+    console.log(`[CraftingService] Inventory:`, this.bot.inventory ? this.bot.inventory.items().map(i => `${i.name}x${i.count}`).join(', ') : 'none');
+
+    // === FAST PATH: Use Minecraft's recipe API directly (handles all wood types automatically) ===
+    if (typeof this.bot.recipesFor === 'function' && typeof this.bot.craft === 'function' && this.bot.registry) {
+      const namesToTry = [...new Set([resolvedName, itemName])];
+      for (const tryName of namesToTry) {
+        const itemDef = this.bot.registry.itemsByName[tryName];
+        if (!itemDef) continue;
+
+        // Try without crafting table first (2x2 inventory crafting)
+        let mcRecipes = this.bot.recipesFor(itemDef.id, null, 1, null);
+        if (mcRecipes && mcRecipes.length > 0) {
+          // Check if we have the ingredients; if not, try to sub-craft them
+          const canDoNow = await this._ensureIngredientsForRecipe(mcRecipes[0], quantity);
+          if (canDoNow) {
+            try {
+              const batchesNeeded = Math.ceil(quantity / (mcRecipes[0].result.count || 1));
+              await this.bot.craft(mcRecipes[0], batchesNeeded, null);
+              console.log(`[CraftingService] ✅ Crafted ${batchesNeeded}x ${tryName} (inventory 2x2)`);
+              return true;
+            } catch (e) {
+              console.warn(`[CraftingService] Inventory craft failed for ${tryName}:`, e.message);
+            }
+          }
+        }
+
+        // Try with crafting table (3x3)
+        let craftingTableBlock = await this._ensureCraftingTable();
+        if (craftingTableBlock) {
+          mcRecipes = this.bot.recipesFor(itemDef.id, null, 1, craftingTableBlock);
+          if (mcRecipes && mcRecipes.length > 0) {
+            const canDoNow = await this._ensureIngredientsForRecipe(mcRecipes[0], quantity);
+            if (canDoNow) {
+              try {
+                const batchesNeeded = Math.ceil(quantity / (mcRecipes[0].result.count || 1));
+                await this.bot.craft(mcRecipes[0], batchesNeeded, craftingTableBlock);
+                console.log(`[CraftingService] ✅ Crafted ${batchesNeeded}x ${tryName} (crafting table)`);
+                return true;
+              } catch (e) {
+                console.warn(`[CraftingService] Crafting table craft failed for ${tryName}:`, e.message);
+              }
+            } else {
+              console.warn(`[CraftingService] Missing ingredients for ${tryName} at crafting table`);
+            }
+          } else {
+            console.warn(`[CraftingService] No MC recipe found for ${tryName} even with crafting table`);
+          }
+        } else {
+          console.warn(`[CraftingService] Could not place/find crafting table for ${tryName}`);
+        }
+      }
+    }
+
+    // === FALLBACK: Use our custom recipe data ===
+    const recipe = craftingData.recipes[resolvedName] || craftingData.recipes[itemName];
     if (!recipe) {
-      console.warn(`[CraftingService] No recipe registered for '${itemName}'`);
+      console.warn(`[CraftingService] No recipe registered for '${resolvedName || itemName}'`);
       return false;
     }
 
-    // Ensure ingredients exist
-    if (!this.canCraft(itemName, quantity)) {
-      const autoResolved = await this.autoCraftMissing(itemName, quantity);
-      if (!autoResolved) return false;
+    if (!this.canCraft(resolvedName, quantity)) {
+      const autoResolved = await this.autoCraftMissing(resolvedName, quantity);
+      if (!autoResolved) {
+        console.warn(`[CraftingService] autoCraftMissing failed for '${resolvedName}'`);
+        return false;
+      }
     }
 
     const batchesNeeded = Math.ceil(quantity / recipe.resultCount);
     let craftingTableBlock = null;
-
-    // Table required?
     if (recipe.requiresTable) {
       craftingTableBlock = await this._ensureCraftingTable();
       if (!craftingTableBlock) {
-        console.warn('[CraftingService] Crafting table required but none available');
+        console.warn('[CraftingService] Crafting table required but could not be placed/found');
         return false;
       }
     }
 
     try {
-      // If Mineflayer recipes API is available
-      if (typeof this.bot.recipesFor === 'function' && typeof this.bot.craft === 'function') {
-        const itemDef = this.bot.registry ? this.bot.registry.itemsByName[itemName] : null;
-        if (itemDef) {
-          const mcRecipes = this.bot.recipesFor(itemDef.id, null, 1, craftingTableBlock);
-          if (mcRecipes && mcRecipes.length > 0) {
-            await this.bot.craft(mcRecipes[0], batchesNeeded, craftingTableBlock);
-            return true;
-          }
-        }
-      }
-
-      // Mock / fallback simulated inventory craft
       for (const ing of recipe.ingredients) {
         this._consumeItem(ing.name, ing.count * batchesNeeded);
       }
-      this._addItem(itemName, recipe.resultCount * batchesNeeded);
+      this._addItem(resolvedName, recipe.resultCount * batchesNeeded);
+      console.log(`[CraftingService] ✅ Crafted ${batchesNeeded}x ${resolvedName} (fallback simulation)`);
       return true;
     } catch (err) {
-      console.warn(`[CraftingService] Crafting '${itemName}' failed:`, err.message);
+      console.warn(`[CraftingService] Fallback craft '${resolvedName}' failed:`, err.message);
       return false;
     }
   }
+
+  /**
+   * Checks if the bot has all ingredients for a mineflayer recipe, and attempts to sub-craft any craftable missing ones.
+   * @private
+   */
+  async _ensureIngredientsForRecipe(recipe, quantity = 1) {
+    if (!recipe || !recipe.ingredients) return true;
+    const batchesNeeded = Math.ceil(quantity / (recipe.result.count || 1));
+
+    for (const ingredient of recipe.ingredients) {
+      if (!ingredient) continue;
+      const itemId = ingredient.id !== undefined ? ingredient.id : (ingredient.item !== undefined ? ingredient.item : null);
+      if (itemId === null || itemId < 0) continue;
+
+      const countNeeded = (ingredient.count || 1) * batchesNeeded;
+      const itemDef = this.bot.registry ? Object.values(this.bot.registry.itemsByName).find(i => i.id === itemId) : null;
+      const itemName = itemDef ? itemDef.name : null;
+
+      const countInInventory = itemName ? this._countItem(itemName) : 0;
+      if (countInInventory < countNeeded) {
+        // Try to sub-craft the missing ingredient
+        if (itemName) {
+          console.log(`[CraftingService] Missing ingredient '${itemName}' (${countInInventory}/${countNeeded}), attempting sub-craft...`);
+          const subCrafted = await this.craft(itemName, countNeeded - countInInventory);
+          if (!subCrafted) {
+            console.warn(`[CraftingService] Could not sub-craft '${itemName}'`);
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
 
   /**
    * Recursively crafts prerequisite materials (e.g. logs -> planks -> sticks -> pickaxe).
@@ -212,28 +294,58 @@ class CraftingService {
     // 1. Check for nearby existing crafting table block
     if (this.ctx && this.ctx.target) {
       const nearbyTable = this.ctx.target.findNearestBlock(['crafting_table'], craftingConfig.CRAFTING_TABLE_SEARCH_RADIUS);
-      if (nearbyTable) return nearbyTable;
+      if (nearbyTable) {
+        if (this.ctx.nav && typeof this.ctx.nav.goTo === 'function') {
+          try { await this.ctx.nav.goTo(nearbyTable.position, { range: 3, allowBreak: false }); } catch (e) {}
+        }
+        return nearbyTable;
+      }
     }
 
     // 2. Check if bot has crafting table in inventory to place
-    const tableItem = this._findItem('crafting_table');
+    let tableItem = this._findItem('crafting_table');
     if (!tableItem) {
       // Craft a crafting table if possible
       const crafted = await this.autoCraftMissing('crafting_table', 1);
       if (!crafted) return null;
+      tableItem = this._findItem('crafting_table');
     }
 
     // 3. Place crafting table adjacent to bot
-    if (this.bot.entity && typeof this.bot.placeBlock === 'function') {
-      const groundPos = this.bot.entity.position.offset(1, -1, 0).floored();
-      const groundBlock = this.bot.blockAt(groundPos);
-      if (groundBlock && groundBlock.boundingBox === 'block') {
+    if (this.bot && this.bot.entity && typeof this.bot.placeBlock === 'function') {
+      const { Vec3 } = require('vec3');
+      const offsets = [
+        { x: 1, z: 0 },
+        { x: -1, z: 0 },
+        { x: 0, z: 1 },
+        { x: 0, z: -1 }
+      ];
+
+      for (const off of offsets) {
         try {
-          await this.bot.equip(this._findItem('crafting_table'), 'hand');
-          await this.bot.placeBlock(groundBlock, { x: 0, y: 1, z: 0 });
-          return this.bot.blockAt(groundPos.offset(0, 1, 0));
+          const botPos = this.bot.entity.position.floored();
+          // The target position where we want to place the table
+          const targetPos = botPos.offset(off.x, 0, off.z);
+          // The block currently at that position (must be air/replaceable)
+          const spaceBlock = this.bot.blockAt(targetPos, false);
+          // The block below — this is what we place the table ON TOP OF
+          const groundBlock = this.bot.blockAt(targetPos.offset(0, -1, 0), false);
+
+          const isGroundSolid = groundBlock && (groundBlock.boundingBox === 'block');
+          const isSpaceClear = spaceBlock && (spaceBlock.boundingBox === 'empty' || spaceBlock.name === 'air' || spaceBlock.name === 'cave_air' || spaceBlock.name === 'void_air' || spaceBlock.name.includes('grass') || spaceBlock.name.includes('flower'));
+
+          if (isGroundSolid && isSpaceClear && tableItem) {
+            await this.bot.equip(tableItem, 'hand');
+            // placeBlock(referenceBlock, faceVector) — place on TOP face of groundBlock
+            await this.bot.placeBlock(groundBlock, new Vec3(0, 1, 0));
+            await new Promise((r) => setTimeout(r, 300));
+            const placed = this.bot.blockAt(targetPos, false);
+            if (placed && placed.name === 'crafting_table') {
+              return placed;
+            }
+          }
         } catch (e) {
-          // Table placement fallback
+          // Table placement retry next offset
         }
       }
     }
@@ -268,21 +380,88 @@ class CraftingService {
 
   _countItem(name) {
     if (!this.bot || !this.bot.inventory) return 0;
-    return this.bot.inventory.items()
+    const items = this.bot.inventory.items();
+    // Handle any wood log variant
+    if (name === 'oak_planks' || name === 'planks' || name.endsWith('_planks')) {
+      return items
+        .filter((i) => i.name && (i.name.endsWith('_planks') || i.name === 'planks'))
+        .reduce((sum, i) => sum + i.count, 0);
+    }
+    if (name === 'oak_log' || name === 'log' || name.endsWith('_log') || name.endsWith('_stem') || name.endsWith('_wood')) {
+      return items
+        .filter((i) => i.name && (i.name.endsWith('_log') || i.name.endsWith('_stem') || i.name.endsWith('_wood') || i.name === 'log'))
+        .reduce((sum, i) => sum + i.count, 0);
+    }
+    return items
       .filter((i) => i.name === name)
       .reduce((sum, i) => sum + i.count, 0);
   }
 
+  /**
+   * Resolves generic wood aliases (oak_planks, oak_log) to the actual wood type in inventory.
+   * This ensures the Minecraft recipe API gets the right item ID regardless of tree type chopped.
+   * @param {string} itemName
+   * @returns {string} Actual item name in inventory, or original name
+   * @private
+   */
+  _resolveWoodAlias(itemName) {
+    if (!this.bot || !this.bot.inventory) return itemName;
+    const items = this.bot.inventory.items();
+
+    // Resolve planks alias → find the actual planks type in inventory
+    if (itemName === 'oak_planks' || itemName === 'planks') {
+      const plankItem = items.find((i) => i.name && i.name.endsWith('_planks'));
+      if (plankItem) return plankItem.name;
+    }
+
+    // Resolve log alias → find the actual log type in inventory
+    if (itemName === 'oak_log' || itemName === 'log') {
+      const logItem = items.find((i) => i.name && (i.name.endsWith('_log') || i.name.endsWith('_stem')));
+      if (logItem) return logItem.name;
+    }
+
+    // Resolve stick: use whatever planks are available to derive stick name
+    if (itemName === 'stick') {
+      return 'stick'; // sticks are universal
+    }
+
+    // Resolve crafting_table: needs planks
+    if (itemName === 'crafting_table') {
+      return 'crafting_table'; // universal
+    }
+
+    // Resolve wooden_pickaxe: universal
+    if (itemName === 'wooden_pickaxe') {
+      return 'wooden_pickaxe'; // universal
+    }
+
+    return itemName;
+  }
+
   _findItem(name) {
     if (!this.bot || !this.bot.inventory) return null;
-    return this.bot.inventory.items().find((i) => i.name === name) || null;
+    const items = this.bot.inventory.items();
+    if (name === 'oak_planks' || name === 'planks') {
+      return items.find((i) => i.name && (i.name === 'oak_planks' || i.name.endsWith('_planks') || i.name === 'planks')) || null;
+    }
+    if (name === 'oak_log' || name === 'log') {
+      return items.find((i) => i.name && (i.name === 'oak_log' || i.name.endsWith('_log') || i.name.endsWith('_stem') || i.name.endsWith('_wood') || i.name === 'log')) || null;
+    }
+    return items.find((i) => i.name === name) || null;
   }
 
   _consumeItem(name, count) {
     if (!this.bot || !this.bot.inventory) return;
     let remaining = count;
+    const isPlanks = (name === 'oak_planks' || name === 'planks');
+    const isLog = (name === 'oak_log' || name === 'log');
+
     for (const item of this.bot.inventory.items()) {
-      if (item.name === name) {
+      const match = item.name === name ||
+        (isPlanks && (item.name.endsWith('_planks') || item.name === 'planks')) ||
+        (isLog && (item.name.endsWith('_log') || item.name.endsWith('_stem') || item.name.endsWith('_wood') || item.name === 'log'));
+
+      if (match) {
         if (item.count <= remaining) {
           remaining -= item.count;
           item.count = 0;
@@ -303,6 +482,17 @@ class CraftingService {
     } else if (Array.isArray(this.bot.inventory.items())) {
       this.bot.inventory.items().push({ name, count });
     }
+  }
+
+  /**
+   * Health heartbeat check for AIBrain.
+   * @returns {{ ok: boolean, isCrafting: boolean }}
+   */
+  ping() {
+    return {
+      ok: true,
+      isCrafting: Boolean(this.isCrafting)
+    };
   }
 }
 

@@ -26,7 +26,7 @@ class NavigationService {
     this.followTarget = null;
     this.followInterval = null;
     this.currentGoal = null;
-    this.stuckDetector = getStuckDetector(this.bot, 10);
+    this.stuckDetector = getStuckDetector(this.bot, 4);  // 4s detection window (was 10s)
     this.breadcrumbs = [];
 
     this.initPathfinder();
@@ -91,7 +91,7 @@ class NavigationService {
     }
 
     const startTime = Date.now();
-    const timeoutMs = options.timeout !== undefined ? options.timeout : 60000;
+    const timeoutMs = options.timeoutMs !== undefined ? options.timeoutMs : (options.timeout !== undefined ? options.timeout : 60000);
     const allowBreak = Boolean(options.allowBreak);
     const range = options.range !== undefined ? options.range : 1;
 
@@ -131,7 +131,7 @@ class NavigationService {
               reject(new Error('Stuck, manual intervention needed'));
             }
           }
-        }, 2000);
+        }, 1000);  // Check every 1s (was 2s)
 
         this.bot.pathfinder.goto(goal)
           .then(() => resolve(true))
@@ -175,51 +175,94 @@ class NavigationService {
   async _attemptStuckRecovery(onStuckCallback, allowBreak = false) {
     console.warn('[NavigationService] Stuck detected. Initiating recovery protocol...');
 
-    // Step 1: Small jump
-    this.bot.setControlState('jump', true);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    this.bot.setControlState('jump', false);
+    const bot = this.bot;
+    if (!bot || !bot.entity) return false;
 
-    // Wait 3 seconds to see if bot continues moving
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Helper: sprint-jump-forward burst in a given direction (yaw in radians)
+    const sprintJumpBurst = async (yawOverride = null) => {
+      try {
+        if (yawOverride !== null && typeof bot.look === 'function') {
+          await bot.look(yawOverride, 0, false);
+        }
+        // Simultaneously sprint + jump + move forward — this is what clears a 1-block ledge
+        bot.setControlState('sprint', true);
+        bot.setControlState('forward', true);
+        bot.setControlState('jump', true);
+        await new Promise((r) => setTimeout(r, 120));
+        bot.setControlState('jump', false);
+        await new Promise((r) => setTimeout(r, 250));
+        bot.setControlState('forward', false);
+        bot.setControlState('sprint', false);
+      } catch (e) {}
+    };
+
+    // Attempt 1: Jump forward in current facing direction
+    await sprintJumpBurst();
+    await new Promise((r) => setTimeout(r, 600));
     if (!this.isStuck()) {
-      console.log('[NavigationService] Recovered after jump.');
+      console.log('[NavigationService] Recovered: sprint-jump forward.');
       this.stuckDetector.reset();
       return true;
     }
 
-    // Step 2: Try breaking one blocking block if permitted
-    if (allowBreak && this.bot.entity && this.bot.entity.position) {
-      const blacklist = ['bedrock', 'chest', 'trapped_chest', 'ender_chest', 'spawner', 'barrier', 'diamond_block'];
-      const offsets = [
-        { x: 1, y: 1, z: 0 },
-        { x: -1, y: 1, z: 0 },
-        { x: 0, y: 1, z: 1 },
-        { x: 0, y: 1, z: -1 },
-        { x: 1, y: 0, z: 0 },
-        { x: -1, y: 0, z: 0 },
-        { x: 0, y: 0, z: 1 },
-        { x: 0, y: 0, z: -1 }
+    // Attempt 2: Break the 1-block obstacle directly in front/above if allowed
+    if (allowBreak && bot.entity && bot.entity.position) {
+      const blacklist = ['bedrock', 'chest', 'trapped_chest', 'ender_chest', 'spawner', 'barrier', 'diamond_block', 'obsidian'];
+      const currentPos = bot.entity.position.floored();
+      // Check blocks at feet level AND 1 block up (the classic 1-block-jump obstacle)
+      const obstacleOffsets = [
+        { x: 0, y: 1, z: 1 }, { x: 0, y: 1, z: -1 }, { x: 1, y: 1, z: 0 }, { x: -1, y: 1, z: 0 },
+        { x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 }, { x: 1, y: 0, z: 0 }, { x: -1, y: 0, z: 0 },
+        { x: 0, y: 2, z: 1 }, { x: 0, y: 2, z: -1 }, { x: 1, y: 2, z: 0 }, { x: -1, y: 2, z: 0 }
       ];
 
-      const currentPos = this.bot.entity.position.floored();
-      for (const off of offsets) {
+      for (const off of obstacleOffsets) {
         const checkPos = currentPos.offset(off.x, off.y, off.z);
-        const block = this.bot.blockAt(checkPos);
-        if (block && block.boundingBox === 'block' && !blacklist.includes(block.name) && this.bot.canDigBlock(block)) {
+        const block = bot.blockAt(checkPos);
+        if (block && block.boundingBox === 'block' && !blacklist.includes(block.name) && bot.canDigBlock(block)) {
           try {
-            console.log(`[NavigationService] Clearing obstacle block ${block.name} at ${checkPos}`);
-            await this.bot.dig(block);
+            console.log(`[NavigationService] Clearing obstacle block ${block.name} at (${checkPos.x},${checkPos.y},${checkPos.z})`);
+            await bot.dig(block);
             this.stuckDetector.reset();
             return true;
           } catch (digErr) {
-            console.warn('[NavigationService] Failed to dig blocking block:', digErr.message);
+            console.warn('[NavigationService] Failed to dig block:', digErr.message);
           }
         }
       }
     }
 
-    // Step 3: Execute custom stuck callback if provided
+    // Attempt 3: Try 4 different yaw angles (N/S/E/W) to escape a corner
+    if (bot.entity) {
+      const currentYaw = bot.entity.yaw || 0;
+      const angles = [0, Math.PI / 2, Math.PI, -Math.PI / 2]; // 0, 90, 180, 270 degrees offset
+      for (const angleOffset of angles) {
+        await sprintJumpBurst(currentYaw + angleOffset);
+        await new Promise((r) => setTimeout(r, 500));
+        if (!this.isStuck()) {
+          console.log(`[NavigationService] Recovered via angle offset ${Math.round(angleOffset * 180 / Math.PI)}°`);
+          this.stuckDetector.reset();
+          // Re-point bot toward original goal
+          return true;
+        }
+      }
+    }
+
+    // Attempt 4: Step back then jump forward (unstick from ledge lip)
+    try {
+      bot.setControlState('back', true);
+      await new Promise((r) => setTimeout(r, 400));
+      bot.setControlState('back', false);
+      await sprintJumpBurst();
+      await new Promise((r) => setTimeout(r, 600));
+      if (!this.isStuck()) {
+        console.log('[NavigationService] Recovered: step-back then jump.');
+        this.stuckDetector.reset();
+        return true;
+      }
+    } catch (e) {}
+
+    // Attempt 5: Execute custom stuck callback if provided
     if (typeof onStuckCallback === 'function') {
       try {
         await onStuckCallback();

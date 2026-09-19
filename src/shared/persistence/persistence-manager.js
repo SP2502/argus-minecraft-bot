@@ -10,6 +10,16 @@ class PersistenceManager {
   constructor() {
     this.isRender = process.env.RENDER === 'true';
     this.dataDir = this.getDataDirectory();
+    this.logBuffer = [];
+    this.MAX_LOG_BATCH_SIZE = 100;
+    this.LOG_FLUSH_INTERVAL_MS = 5000;
+
+    this.logFlushTimer = setInterval(() => {
+      this.flushLogs().catch(() => {});
+    }, this.LOG_FLUSH_INTERVAL_MS);
+    if (this.logFlushTimer && typeof this.logFlushTimer.unref === 'function') {
+      this.logFlushTimer.unref();
+    }
   }
 
   /**
@@ -138,18 +148,36 @@ class PersistenceManager {
   }
 
   /**
-   * Appends a log entry to persistent bot.log.
+   * Buffers a log entry and flushes when batch size reaches 100 entries or on 5s timer.
    * @param {Object|string} logEntry - Log entry to record
    */
   async saveLog(logEntry) {
     try {
-      await this.ensureDataDir();
-      const logFile = path.join(this.dataDir, 'bot.log');
       const entryStr = typeof logEntry === 'string' ? logEntry : JSON.stringify(logEntry);
       const line = `${new Date().toISOString()} - ${entryStr}\n`;
-      await fs.appendFile(logFile, line, 'utf-8');
+      this.logBuffer.push(line);
+
+      if (this.logBuffer.length >= this.MAX_LOG_BATCH_SIZE) {
+        await this.flushLogs();
+      }
     } catch (err) {
-      // Non-fatal if log write fails
+      // Non-fatal if log buffering fails
+    }
+  }
+
+  /**
+   * Flushes all buffered log entries to persistent disk (bot.log).
+   */
+  async flushLogs() {
+    if (!this.logBuffer || this.logBuffer.length === 0) return;
+    const toWrite = this.logBuffer.splice(0, this.logBuffer.length);
+    try {
+      await this.ensureDataDir();
+      const logFile = path.join(this.dataDir, 'bot.log');
+      await fs.appendFile(logFile, toWrite.join(''), 'utf-8');
+    } catch (err) {
+      // Restore entries if write fails
+      this.logBuffer.unshift(...toWrite);
     }
   }
 

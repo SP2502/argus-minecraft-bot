@@ -15,6 +15,74 @@ class SafetyService {
     this.ctx = ctx;
     this.lastDamageTime = 0;
     this.consecutiveDamageCount = 0;
+    this.lastEatTime = 0;
+    this._isEating = false;
+    this.lastFireExtinguishTime = 0;
+    this.lastPotionCureTime = 0;
+    this.isHandlingHazard = false;
+    this.lastShieldBlockTime = 0;
+  }
+
+  /**
+   * Autonomous survival auto-eat routine.
+   * Evaluates current health and food level and consumes best available food from inventory.
+   * Smooth & reliable: enforces an 8-second cooldown and only eats when actually depleted or damaged.
+   * 
+   * @returns {Promise<boolean>} True if food was successfully consumed
+   */
+  async checkAutoEat() {
+    if (!this.bot || this.bot.food === undefined) return false;
+    const now = Date.now();
+    if (now - this.lastEatTime < 8000) return false;
+
+    const food = this.bot.food;
+    const health = this.bot.health !== undefined ? this.bot.health : 20;
+
+    // Eat if hungry (<=16) or if injured (<18 health and food < 20 to regenerate)
+    const needsFood = food <= 16 || (health < 18 && food < 20);
+    if (!needsFood) return false;
+
+    const EDIBLE_FOODS = [
+      'golden_apple', 'enchanted_golden_apple', 'golden_carrot',
+      'cooked_beef', 'steak', 'cooked_porkchop', 'cooked_mutton',
+      'cooked_salmon', 'cooked_chicken', 'baked_potato', 'bread',
+      'cooked_cod', 'apple', 'carrot', 'sweet_berries', 'melon_slice',
+      'pumpkin_pie', 'cookie', 'dried_kelp', 'beef', 'porkchop', 'mutton'
+    ];
+
+    const items = this.bot.inventory ? this.bot.inventory.items() : [];
+    let foodItem = null;
+    for (const foodName of EDIBLE_FOODS) {
+      foodItem = items.find((i) => i.name === foodName);
+      if (foodItem) break;
+    }
+
+    if (!foodItem) return false;
+    if (this._isEating) return false;
+    this._isEating = true;
+
+    try {
+      if (typeof this.bot.equip === 'function') {
+        await this.bot.equip(foodItem, 'hand');
+      }
+      if (typeof this.bot.consume === 'function') {
+        await this.bot.consume();
+      }
+      console.log(`[SafetyService] Auto-eat: consumed ${foodItem.name}. Health: ${this.bot.health}/20, Food: ${this.bot.food}/20`);
+      this.lastEatTime = Date.now();
+      if (this.ctx && this.ctx.events) {
+        this.ctx.events.emit('log:entry', {
+          severity: 'INFO',
+          category: 'SAFETY',
+          message: `Auto-ate ${foodItem.name} (Health: ${this.bot.health}/20, Food: ${this.bot.food}/20)`
+        });
+      }
+      return true;
+    } catch (err) {
+      return false;
+    } finally {
+      this._isEating = false;
+    }
   }
 
   /**
@@ -30,6 +98,11 @@ class SafetyService {
     const health = this.bot.health !== undefined ? this.bot.health : 20;
     const food = this.bot.food !== undefined ? this.bot.food : 20;
     const isBurning = Boolean(this.bot.entity && !this.bot.entity.isInWater && this.bot.entity.isBurning);
+
+    // Auto-clear stale damage count if bot was restored to full/high health
+    if (health >= 18 && this.consecutiveDamageCount > 0 && (Date.now() - (this.lastDamageTime || 0)) > 2000) {
+      this.consecutiveDamageCount = 0;
+    }
 
     return (
       health < safetyThresholds.CRITICAL_HEALTH ||
@@ -250,6 +323,298 @@ class SafetyService {
       isNight: this.isNight(),
       shouldRetreat: this.shouldRetreat()
     };
+  }
+
+  /**
+   * Drowning Hazard Guard.
+   * If bot is submerged in water and oxygen is dropping (oxygenLevel <= 12 out of 20),
+   * surfaces aggressively by engaging jump/swim controls until breath is recovered.
+   * 
+   * @returns {boolean} True if drowning avoidance action is currently active
+   */
+  checkDrowningHazard() {
+    if (!this.bot || !this.bot.entity) return false;
+    const oxygen = this.bot.oxygenLevel !== undefined ? this.bot.oxygenLevel : 20;
+    const inWater = Boolean(this.bot.entity.isInWater);
+
+    if (inWater && oxygen <= 12) {
+      if (typeof this.bot.setControlState === 'function') {
+        this.bot.setControlState('jump', true);
+      }
+      if (oxygen <= 6) {
+        console.warn(`[SafetyService] Drowning emergency! Oxygen: ${oxygen}/20. Surfacing immediately.`);
+        if (this.ctx && this.ctx.events) {
+          this.ctx.events.emit('log:entry', {
+            severity: 'WARN',
+            category: 'SAFETY',
+            message: `Drowning warning: Oxygen ${oxygen}/20. Swimming to surface.`
+          });
+        }
+      }
+      return true;
+    } else if (inWater && oxygen >= 18) {
+      // Safely release jump if bot has plenty of air
+      if (typeof this.bot.setControlState === 'function' && !this.bot.controlState?.jump) {
+        // Leave normal controls
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Suffocation / Block Collapse Guard.
+   * Checks if the bot's head is trapped inside a solid non-transparent block
+   * (e.g. falling gravel, sand, or suffocating blocks) and clears or jumps out.
+   * 
+   * @returns {Promise<boolean>} True if suffocation hazard detected and counter-action executed
+   */
+  async checkSuffocationHazard() {
+    if (!this.bot || !this.bot.entity || !this.bot.entity.position || !this.bot.blockAt) return false;
+    try {
+      const eyePos = this.bot.entity.position.offset(0, 1.6, 0).floored();
+      const eyeBlock = this.bot.blockAt(eyePos);
+      if (eyeBlock && eyeBlock.boundingBox === 'block' && eyeBlock.name !== 'air' && eyeBlock.name !== 'water') {
+        console.warn(`[SafetyService] Suffocation hazard! Head inside '${eyeBlock.name}'. Attempting escape.`);
+        // Try jumping and digging the suffocating block if possible
+        if (typeof this.bot.setControlState === 'function') {
+          this.bot.setControlState('jump', true);
+          setTimeout(() => {
+            if (this.bot && typeof this.bot.setControlState === 'function') {
+              this.bot.setControlState('jump', false);
+            }
+          }, 500);
+        }
+        if (typeof this.bot.dig === 'function' && this.bot.canDigBlock && this.bot.canDigBlock(eyeBlock)) {
+          await this.bot.dig(eyeBlock, 'ignore');
+        }
+        return true;
+      }
+    } catch (err) {
+      // Non-fatal
+    }
+    return false;
+  }
+
+  /**
+   * Fire & Lava Extinguishment Protocol.
+   * If bot is burning on fire, checks inventory for a water bucket and places it at feet
+   * to douse the flames, then retrieves the water source block back into the bucket.
+   * 
+   * @returns {Promise<boolean>} True if fire was extinguished with water bucket
+   */
+  async checkFireExtinguishment() {
+    if (!this.bot || !this.bot.entity) return false;
+    const isBurning = Boolean(this.bot.entity.isBurning && !this.bot.entity.isInWater);
+    if (!isBurning) return false;
+
+    const now = Date.now();
+    if (now - this.lastFireExtinguishTime < 4000) return false;
+    this.lastFireExtinguishTime = now;
+
+    if (!this.bot.inventory) return false;
+    const waterBucket = this.bot.inventory.items().find((i) => i.name === 'water_bucket');
+    if (!waterBucket) return false;
+
+    try {
+      console.warn('[SafetyService] Bot burning! Deploying emergency water bucket at feet.');
+      if (this.ctx && this.ctx.events) {
+        this.ctx.events.emit('log:entry', {
+          severity: 'WARN',
+          category: 'SAFETY',
+          message: 'Fire hazard: Placing water bucket at feet to extinguish flames.'
+        });
+      }
+
+      if (typeof this.bot.equip === 'function') {
+        await this.bot.equip(waterBucket, 'hand');
+      }
+
+      const footPos = this.bot.entity.position.floored();
+      const blockBelow = this.bot.blockAt ? this.bot.blockAt(footPos.offset(0, -1, 0)) : null;
+
+      if (blockBelow && typeof this.bot.activateBlock === 'function') {
+        await this.bot.activateBlock(blockBelow, { x: 0, y: 1, z: 0 });
+        
+        // Wait 350ms to extinguish, then retrieve water back into bucket
+        setTimeout(async () => {
+          try {
+            const emptyBucket = this.bot.inventory ? this.bot.inventory.items().find((i) => i.name === 'bucket') : null;
+            if (emptyBucket && typeof this.bot.equip === 'function') {
+              await this.bot.equip(emptyBucket, 'hand');
+              const waterBlock = this.bot.blockAt ? this.bot.blockAt(footPos) : null;
+              if (waterBlock && (waterBlock.name === 'water' || waterBlock.name === 'flowing_water')) {
+                await this.bot.activateBlock(waterBlock);
+              }
+            }
+          } catch (retErr) {
+            // Non-fatal
+          }
+        }, 400);
+
+        return true;
+      }
+    } catch (err) {
+      console.warn('[SafetyService] Failed to place water bucket for fire extinguishment:', err.message);
+    }
+    return false;
+  }
+
+  /**
+   * Negative Potion Effects Cleanser.
+   * Detects negative status effects (Poison, Wither, Nausea, Slowness) and drinks
+   * milk bucket or golden apple if available in inventory.
+   * 
+   * @returns {Promise<boolean>} True if antidote or healing food was consumed
+   */
+  async checkNegativePotionEffects() {
+    if (!this.bot || !this.bot.entity) return false;
+    const effects = this.bot.entity.effects || {};
+    const hasHarmfulEffect = Boolean(effects[19] || effects[20] || effects[9] || effects[2]); // Poison, Wither, Nausea, Slowness
+    if (!hasHarmfulEffect) return false;
+
+    const now = Date.now();
+    if (now - this.lastPotionCureTime < 6000) return false;
+    this.lastPotionCureTime = now;
+
+    if (!this.bot.inventory) return false;
+    const items = this.bot.inventory.items();
+    const milk = items.find((i) => i.name === 'milk_bucket');
+    const gapple = items.find((i) => i.name === 'golden_apple' || i.name === 'enchanted_golden_apple');
+
+    const cureItem = milk || gapple;
+    if (!cureItem) return false;
+
+    try {
+      console.log(`[SafetyService] Harmful potion effect detected. Consuming ${cureItem.name} to neutralize.`);
+      if (typeof this.bot.equip === 'function') {
+        await this.bot.equip(cureItem, 'hand');
+      }
+      if (typeof this.bot.consume === 'function') {
+        await this.bot.consume();
+      }
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /**
+   * Tactical Projectile Defense / Shield Block.
+   * Detects nearby hostile ranged attackers (Skeletons, Strays, Pillagers) aiming or within 14m
+   * and raises off-hand shield to deflect incoming arrows.
+   * 
+   * @returns {boolean} True if shield is actively raised
+   */
+  checkProjectileDefense() {
+    if (!this.bot || !this.bot.inventory || !this.bot.entities) return false;
+
+    const offhandSlot = this.bot.inventory.slots[45];
+    const hasShield = offhandSlot && offhandSlot.name === 'shield';
+    if (!hasShield) {
+      // Auto-equip shield if present in inventory
+      const shieldItem = this.bot.inventory.items().find((i) => i.name === 'shield');
+      if (shieldItem && typeof this.bot.equip === 'function') {
+        this.bot.equip(shieldItem, 'off-hand').catch(() => {});
+      }
+      return false;
+    }
+
+    const botPos = this.bot.entity ? this.bot.entity.position : null;
+    if (!botPos) return false;
+
+    let rangedThreat = null;
+    const RANGED_TYPES = ['skeleton', 'stray', 'pillager', 'piglin', 'drowned'];
+
+    for (const ent of Object.values(this.bot.entities)) {
+      if (!ent || !ent.position || ent === this.bot.entity) continue;
+      if (ent.isValid === false) continue;
+      if (RANGED_TYPES.includes(ent.name)) {
+        const dist = typeof botPos.distanceTo === 'function'
+          ? botPos.distanceTo(ent.position)
+          : Math.sqrt(Math.pow(botPos.x - ent.position.x, 2) + Math.pow(botPos.z - ent.position.z, 2));
+
+        if (dist <= 14) {
+          rangedThreat = ent;
+          break;
+        }
+      }
+    }
+
+    if (rangedThreat) {
+      const now = Date.now();
+      this.lastShieldBlockTime = now;
+      if (typeof this.bot.lookAt === 'function') {
+        this.bot.lookAt(rangedThreat.position.offset(0, 1.4, 0), true).catch(() => {});
+      }
+      if (typeof this.bot.activateItem === 'function') {
+        this.bot.activateItem(true);
+      }
+      return true;
+    } else {
+      // Lower shield if no ranged threat within 14m and shield was raised > 1.5s ago
+      if (Date.now() - this.lastShieldBlockTime > 1500) {
+        if (typeof this.bot.deactivateItem === 'function') {
+          this.bot.deactivateItem();
+        }
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Master Autonomous Safety Protocol.
+   * Sequentially evaluates all self-preservation layers:
+   * 1. Drowning hazard
+   * 2. Fire extinguishment
+   * 3. Suffocation avoidance
+   * 4. Antidote/potion cures
+   * 5. Hunger/Health auto-eat
+   * 6. Projectile shield defense
+   * 
+   * @returns {Promise<boolean>} True if any self-safety action was executed
+   */
+  async runSafetyProtocol() {
+    if (this.isHandlingHazard) return false;
+    this.isHandlingHazard = true;
+
+    try {
+      // 1. Drowning
+      if (this.checkDrowningHazard()) {
+        return true;
+      }
+
+      // 2. Fire Extinguishment
+      if (await this.checkFireExtinguishment()) {
+        return true;
+      }
+
+      // 3. Suffocation
+      if (await this.checkSuffocationHazard()) {
+        return true;
+      }
+
+      // 4. Antidote / Poison
+      if (await this.checkNegativePotionEffects()) {
+        return true;
+      }
+
+      // 5. Auto-Eat
+      if (await this.checkAutoEat()) {
+        return true;
+      }
+
+      // 6. Shield Defense
+      if (this.checkProjectileDefense()) {
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.warn('[SafetyService] Error in runSafetyProtocol:', err.message);
+      return false;
+    } finally {
+      this.isHandlingHazard = false;
+    }
   }
 
   /**

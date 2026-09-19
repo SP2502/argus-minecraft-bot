@@ -44,8 +44,19 @@ class InventoryService {
   countItem(itemName) {
     if (!this.bot || !this.bot.inventory || !itemName) return 0;
     const items = this.bot.inventory.items();
+    const isPlanks = itemName === 'planks' || itemName === 'oak_planks';
+    const isLog = itemName === 'log' || itemName === 'oak_log';
+
     return items
-      .filter((item) => item.name === itemName)
+      .filter((item) => {
+        if (!item || !item.name) return false;
+        if (item.name === itemName) return true;
+        if (isPlanks && (item.name.endsWith('_planks') || item.name === 'planks')) return true;
+        if (isLog && (item.name.endsWith('_log') || item.name.endsWith('_stem') || item.name.endsWith('_wood') || item.name === 'log')) return true;
+        if (item.name.endsWith(`_${itemName}`)) return true;
+        if (itemName.endsWith('s') && item.name.endsWith(`_${itemName.slice(0, -1)}`)) return true;
+        return false;
+      })
       .reduce((acc, item) => acc + item.count, 0);
   }
 
@@ -60,6 +71,47 @@ class InventoryService {
    */
   hasItem(itemName, minCount = 1) {
     return this.countItem(itemName) >= minCount;
+  }
+
+  /**
+   * Finds the first inventory item matching itemName.
+   * @param {string} itemName
+   * @returns {import('prismarine-item').Item|null}
+   */
+  findItem(itemName) {
+    if (!this.bot || !this.bot.inventory || !itemName) return null;
+    const isPlanks = itemName === 'planks' || itemName === 'oak_planks';
+    const isLog = itemName === 'log' || itemName === 'oak_log';
+
+    return this.bot.inventory.items().find((item) => {
+      if (!item || !item.name) return false;
+      if (item.name === itemName) return true;
+      if (isPlanks && (item.name.endsWith('_planks') || item.name === 'planks')) return true;
+      if (isLog && (item.name.endsWith('_log') || item.name.endsWith('_stem') || item.name.endsWith('_wood') || item.name === 'log')) return true;
+      if (item.name.endsWith(`_${itemName}`)) return true;
+      return false;
+    }) || null;
+  }
+
+  /**
+   * Equips an item by name or instance to the specified destination.
+   * @param {string|Object} itemOrName
+   * @param {'hand'|'off-hand'|'head'|'torso'|'legs'|'feet'} [destination='hand']
+   * @returns {Promise<boolean>}
+   */
+  async equip(itemOrName, destination = 'hand') {
+    if (!this.bot || typeof this.bot.equip !== 'function') return false;
+    let item = itemOrName;
+    if (typeof itemOrName === 'string') {
+      item = this.findItem(itemOrName);
+    }
+    if (!item) return false;
+    try {
+      await this.bot.equip(item, destination);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   /**

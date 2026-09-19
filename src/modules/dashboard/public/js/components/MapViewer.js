@@ -1,12 +1,14 @@
 /**
  * MapViewer Component
- * Canvas-based 2D top-down minimap rendering bot position and orientation.
+ * Real-time 2D Canvas Radar rendering bot position, direction heading,
+ * concentric range rings, and surrounding entity coordinates.
  */
 class MapViewer {
   constructor(canvasId) {
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
     this.botPos = { x: 0, y: 64, z: 0, yaw: 0 };
+    this.entities = [];
     this.lastRenderTime = 0;
     this.render();
   }
@@ -17,16 +19,15 @@ class MapViewer {
         x: pos.x,
         y: pos.y,
         z: pos.z,
-        yaw: yaw || 0
+        yaw: yaw !== undefined ? yaw : (this.botPos ? this.botPos.yaw : 0)
       };
     }
+    this.render();
+  }
 
-    // Throttle rendering to ~1 FPS to conserve CPU
-    const now = Date.now();
-    if (now - this.lastRenderTime >= 1000) {
-      this.render();
-      this.lastRenderTime = now;
-    }
+  updateEntities(entities = []) {
+    this.entities = entities;
+    this.render();
   }
 
   render() {
@@ -38,62 +39,80 @@ class MapViewer {
     const centerY = height / 2;
 
     // Clear background
-    this.ctx.fillStyle = '#12141a';
+    this.ctx.fillStyle = '#07090e';
     this.ctx.fillRect(0, 0, width, height);
 
-    // Draw coordinate grid lines
-    this.ctx.strokeStyle = '#222736';
+    // Draw concentric range rings (16m, 32m, 48m scale)
+    this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
     this.ctx.lineWidth = 1;
 
-    for (let x = 0; x < width; x += 32) {
+    [30, 60, 90].forEach((radius) => {
       this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, height);
+      this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       this.ctx.stroke();
-    }
-    for (let y = 0; y < height; y += 32) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(width, y);
-      this.ctx.stroke();
-    }
+    });
 
-    // Draw radar range circles
-    this.ctx.strokeStyle = '#2d3748';
+    // Crosshair axis
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     this.ctx.beginPath();
-    this.ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
+    this.ctx.moveTo(centerX, 15);
+    this.ctx.lineTo(centerX, height - 15);
+    this.ctx.moveTo(15, centerY);
+    this.ctx.lineTo(width - 15, centerY);
     this.ctx.stroke();
 
-    this.ctx.beginPath();
-    this.ctx.arc(centerX, centerY, 80, 0, Math.PI * 2);
-    this.ctx.stroke();
+    // Cardinal Labels
+    this.ctx.font = '10px "JetBrains Mono", monospace';
+    this.ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('N', centerX, 12);
+    this.ctx.fillText('S', centerX, height - 4);
+    this.ctx.fillText('W', 10, centerY + 3);
+    this.ctx.fillText('E', width - 10, centerY + 3);
 
-    // Draw Bot indicator (Triangle / Arrow in Center)
+    // Draw Nearby Entities
+    if (Array.isArray(this.entities)) {
+      for (const ent of this.entities) {
+        if (!ent || !ent.position) continue;
+        const dx = (ent.position.x - this.botPos.x) * 2;
+        const dz = (ent.position.z - this.botPos.z) * 2;
+        const ex = centerX + dx;
+        const ey = centerY + dz;
+
+        if (ex >= 0 && ex <= width && ey >= 0 && ey <= height) {
+          this.ctx.fillStyle = ent.isPlayer ? '#38bdf8' : '#f43f5e';
+          this.ctx.beginPath();
+          this.ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+      }
+    }
+
+    // Draw Bot Avatar & Direction Needle
     this.ctx.save();
     this.ctx.translate(centerX, centerY);
-    this.ctx.rotate(this.botPos.yaw);
+    // Convert yaw to canvas rotation (In Minecraft, 0 is south, pi/2 is west, etc.)
+    const angle = this.botPos.yaw ? -this.botPos.yaw : 0;
+    this.ctx.rotate(angle);
 
-    // Bot Arrow marker
-    this.ctx.fillStyle = '#3742fa';
+    // Direction needle
+    this.ctx.fillStyle = '#38bdf8';
+    this.ctx.shadowColor = 'rgba(56, 189, 248, 0.8)';
+    this.ctx.shadowBlur = 8;
     this.ctx.beginPath();
-    this.ctx.moveTo(0, -10);
-    this.ctx.lineTo(7, 8);
-    this.ctx.lineTo(0, 4);
-    this.ctx.lineTo(-7, 8);
+    this.ctx.moveTo(0, -12);
+    this.ctx.lineTo(6, 6);
+    this.ctx.lineTo(0, 3);
+    this.ctx.lineTo(-6, 6);
     this.ctx.closePath();
     this.ctx.fill();
 
-    this.ctx.strokeStyle = '#ffffff';
-    this.ctx.lineWidth = 1.5;
-    this.ctx.stroke();
-
     this.ctx.restore();
 
-    // Overlay text coordinates
-    this.ctx.fillStyle = '#70a1ff';
-    this.ctx.font = '10px monospace';
-    this.ctx.fillText(`Pos: (${Math.round(this.botPos.x)}, ${Math.round(this.botPos.y)}, ${Math.round(this.botPos.z)})`, 8, height - 10);
+    // Coordinate Label in corner
+    this.ctx.font = '10px "JetBrains Mono", monospace';
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    this.ctx.textAlign = 'left';
+    this.ctx.fillText(`X:${Math.round(this.botPos.x)} Z:${Math.round(this.botPos.z)}`, 10, height - 10);
   }
 }
-
-window.MapViewer = MapViewer;

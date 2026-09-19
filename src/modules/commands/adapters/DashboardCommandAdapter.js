@@ -33,6 +33,20 @@ class DashboardCommandAdapter {
       }
     };
 
+    if (!this.ctx || !this.ctx.commandGateway) {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'dashboard.command.result',
+          data: {
+            ok: false,
+            status: 'offline',
+            message: 'Bot is currently offline or connecting to Minecraft. Command Gateway will become available once bot spawns in-game.'
+          }
+        }));
+      }
+      return;
+    }
+
     try {
       const response = await this.ctx.commandGateway.execute(request);
 

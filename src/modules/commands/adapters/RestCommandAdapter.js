@@ -21,6 +21,14 @@ function createRestCommandRouter(ctx) {
       });
     }
 
+    if (!ctx || !ctx.commandGateway) {
+      return res.status(503).json({
+        ok: false,
+        status: 'offline',
+        message: 'Bot is currently offline or connecting to Minecraft. Command Gateway will become available once bot spawns in-game.'
+      });
+    }
+
     const senderId = req.auth.username;
 
     const request = {
@@ -50,7 +58,7 @@ function createRestCommandRouter(ctx) {
 
   // GET /api/tasks - Retrieve TaskManager queue snapshot
   router.get('/tasks', (req, res) => {
-    if (!ctx.taskManager) {
+    if (!ctx || !ctx.taskManager) {
       return res.json({ activeTask: null, queue: [], isPaused: false });
     }
     return res.json(ctx.taskManager.getQueueSnapshot());
@@ -58,6 +66,13 @@ function createRestCommandRouter(ctx) {
 
   // POST /api/tasks/:id/cancel - Routes cancellation safely through gateway
   router.post('/tasks/:id/cancel', async (req, res) => {
+    if (!ctx || !ctx.commandGateway) {
+      return res.status(503).json({
+        ok: false,
+        status: 'offline',
+        message: 'Bot is currently offline or connecting to Minecraft.'
+      });
+    }
     const taskId = req.params.id;
     const request = {
       source: 'rest',

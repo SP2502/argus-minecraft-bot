@@ -20,6 +20,60 @@ function broadcast(wss, payload) {
 }
 
 /**
+ * Extracts radar entity telemetry from a Mineflayer bot instance.
+ * @param {import('mineflayer').Bot} bot - Bot instance
+ * @param {number} [maxDistance=64] - Radius in meters
+ * @returns {Array<Object>} List of nearby entities with coordinates and metadata
+ */
+function getNearbyRadarEntities(bot, maxDistance = 64) {
+  if (!bot || !bot.entity || !bot.entities) return [];
+  const botPos = bot.entity.position;
+  const results = [];
+  const hostileNames = new Set([
+    'zombie', 'skeleton', 'creeper', 'spider', 'enderman', 'witch', 'slime',
+    'phantom', 'drowned', 'husk', 'stray', 'pillager', 'vindicator', 'ravager',
+    'evoker', 'vex', 'warden', 'piglin_brute', 'blaze', 'ghast', 'magma_cube',
+    'wither_skeleton', 'wither', 'ender_dragon', 'silverfish', 'endermite',
+    'cave_spider', 'shulker', 'guardian', 'elder_guardian', 'zoglin', 'breeze', 'bogged'
+  ]);
+
+  for (const id in bot.entities) {
+    const entity = bot.entities[id];
+    if (!entity || entity === bot.entity || !entity.position) continue;
+
+    const dx = entity.position.x - botPos.x;
+    const dy = entity.position.y - botPos.y;
+    const dz = entity.position.z - botPos.z;
+    const distSq = dx * dx + dy * dy + dz * dz;
+
+    if (distSq > maxDistance * maxDistance) continue;
+    const dist = Math.sqrt(distSq);
+
+    const rawName = entity.name || entity.username || entity.displayName || (entity.type === 'player' ? 'Player' : 'Mob');
+    const entityType = entity.type || 'mob';
+    const isPlayer = entityType === 'player' || Boolean(entity.username);
+    const isHostile = hostileNames.has((rawName || '').toLowerCase()) || entity.isHostile === true;
+
+    results.push({
+      id: entity.id,
+      name: entity.username || rawName,
+      type: isPlayer ? 'player' : (isHostile ? 'hostile' : 'passive'),
+      isHostile,
+      x: Math.round(entity.position.x * 10) / 10,
+      y: Math.round(entity.position.y * 10) / 10,
+      z: Math.round(entity.position.z * 10) / 10,
+      relX: Math.round(dx * 10) / 10,
+      relY: Math.round(dy * 10) / 10,
+      relZ: Math.round(dz * 10) / 10,
+      distance: Math.round(dist * 10) / 10
+    });
+  }
+
+  results.sort((a, b) => a.distance - b.distance);
+  return results.slice(0, 50);
+}
+
+/**
  * Attaches a WebSocket server to an HTTP server instance and coordinates telemetry streaming.
  * @param {import('http').Server} httpServer - Node HTTP server instance
  * @param {import('../core/BotContext')} [ctx] - BotContext reference
@@ -284,10 +338,9 @@ function setupWebSocketServer(httpServer, ctx) {
 
   eventBus.on('log:entry', (entry) => {
     broadcast(wss, { type: 'log.entry', data: entry });
-    persistenceManager.saveLog(entry);
   });
 
-  // 3. Periodic Position Broadcast (Throttled to 1 FPS / 1000ms)
+  // 3. Periodic Position & Radar Entities Broadcast (Throttled to 1 FPS / 1000ms)
   let lastPosBroadcast = 0;
   const positionInterval = setInterval(() => {
     const now = Date.now();
@@ -301,9 +354,16 @@ function setupWebSocketServer(httpServer, ctx) {
           y: Math.round(pos.y * 10) / 10,
           z: Math.round(pos.z * 10) / 10,
           yaw: Math.round(yaw * 100) / 100,
-          dimension: 'overworld'
+          dimension: (ctx.bot.game && ctx.bot.game.dimension) || 'overworld'
         }
       });
+
+      const radarEntities = getNearbyRadarEntities(ctx.bot);
+      broadcast(wss, {
+        type: 'radar.entities',
+        data: { entities: radarEntities }
+      });
+
       lastPosBroadcast = now;
     }
   }, 1000);
@@ -347,5 +407,6 @@ function setupWebSocketServer(httpServer, ctx) {
 
 module.exports = {
   setupWebSocketServer,
-  broadcast
+  broadcast,
+  getNearbyRadarEntities
 };

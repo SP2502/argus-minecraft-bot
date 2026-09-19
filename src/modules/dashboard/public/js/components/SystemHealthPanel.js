@@ -1,6 +1,7 @@
 /**
  * SystemHealthPanel Component
- * Renders module heartbeat status dots, AI decision loop tick rate, and latency metrics.
+ * Displays real-time heartbeat and operational status of all core subsystems,
+ * AI brain tick rate, and lock coordinator telemetry.
  */
 class SystemHealthPanel {
   constructor(containerId) {
@@ -8,11 +9,12 @@ class SystemHealthPanel {
     this.tickRateMs = 500;
     this.mode = 'idle';
     this.modules = {
-      NavigationService: { healthy: true, latencyMs: 0 },
-      InventoryService: { healthy: true, latencyMs: 0 },
-      SafetyService: { healthy: true, latencyMs: 0 },
-      ToolService: { healthy: true, latencyMs: 0 },
-      LocationRegistry: { healthy: true, latencyMs: 0 }
+      'Navigation Subsystem': { healthy: true, status: 'Pathfinder Ready' },
+      'Inventory Controller': { healthy: true, status: '36 Slots Monitored' },
+      'Safety Guardian': { healthy: true, status: '<6 HP Emergency Guard' },
+      'Equipment & Tools': { healthy: true, status: 'Durability Guard Active' },
+      'Task Scheduler': { healthy: true, status: 'Preemption Engine' },
+      'Location Registry': { healthy: true, status: 'Base Waypoints Synced' }
     };
     this.render();
   }
@@ -24,28 +26,34 @@ class SystemHealthPanel {
     for (const [name, state] of Object.entries(this.modules)) {
       const isHealthy = state.healthy !== false;
       moduleHtml += `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: #12141a; border-radius: 4px; border: 1px solid #2a2f3d; font-size: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; background: rgba(9, 12, 19, 0.85); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${isHealthy ? '#2ed573' : '#ff4757'}; box-shadow: 0 0 6px ${isHealthy ? '#2ed573' : '#ff4757'};"></span>
-            <span style="font-weight: 500;">${name}</span>
+            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: ${isHealthy ? '#10b981' : '#f43f5e'}; box-shadow: 0 0 8px ${isHealthy ? 'rgba(16, 185, 129, 0.6)' : 'rgba(244, 63, 94, 0.6)'};"></span>
+            <span style="font-weight: 600; color: #fff;">${name}</span>
           </div>
-          <span style="color: #9aa5b8; font-family: monospace; font-size: 11px;">${state.latencyMs || 0}ms</span>
+          <span style="color: var(--text-muted); font-size: 11px;">${state.status || 'Active'}</span>
         </div>
       `;
     }
 
+    const modeBadgeColor = this.mode === 'combat'
+      ? 'background: rgba(244,63,94,0.15); color: #f43f5e; border: 1px solid rgba(244,63,94,0.3);'
+      : this.mode === 'active'
+      ? 'background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);'
+      : 'background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3);';
+
     this.container.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #12141a; border-radius: 6px; border: 1px solid #2a2f3d;">
-          <span style="font-size: 13px; font-weight: 600;">🧠 AI Decision Loop</span>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(9, 12, 19, 0.85); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="badge" style="background: rgba(55, 66, 250, 0.15); color: #70a1ff; border: 1px solid rgba(55, 66, 250, 0.3); font-size: 11px; text-transform: uppercase;">
-              ${this.mode} (${this.tickRateMs}ms)
-            </span>
+            <span style="font-size: 13px; font-weight: 600; color: #fff;">AI Decision Loop Frequency</span>
           </div>
+          <span class="badge" style="${modeBadgeColor} font-size: 11px; text-transform: uppercase;">
+            ${this.mode.toUpperCase()} MODE (${this.tickRateMs}ms)
+          </span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" id="modulesHealthGrid">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" id="modulesHealthGrid">
           ${moduleHtml}
         </div>
       </div>
@@ -53,6 +61,7 @@ class SystemHealthPanel {
   }
 
   updateHeartbeat(data) {
+    if (!data) return;
     if (data.tickRateMs) this.tickRateMs = data.tickRateMs;
     if (data.mode) this.mode = data.mode;
     if (data.modules) {
@@ -60,12 +69,4 @@ class SystemHealthPanel {
     }
     this.render();
   }
-
-  updateTickRate(mode, rateMs) {
-    this.mode = mode;
-    this.tickRateMs = rateMs;
-    this.render();
-  }
 }
-
-window.SystemHealthPanel = SystemHealthPanel;

@@ -1,98 +1,279 @@
 /**
- * Argus Dashboard Controller
- * Manages WebSocket lifecycle, telemetry event dispatch, and UI component synchronization.
+ * Argus Dashboard Controller - Main Entry Point
+ * Coordinates WebSocket connection, REST polling, state management,
+ * AppShell navigation, and operational page mounting.
  */
-
 class DashboardController {
   constructor() {
     this.ws = null;
     this.reconnectAttempts = 0;
     this.maxReconnectDelay = 10000;
-    this.components = {};
+    this.sessionToken = sessionStorage.getItem('argus_session_token') || localStorage.getItem('argus_session_token') || null;
+    this.pollTimer = null;
+    this.freshnessTimer = null;
+    this.activeView = 'command-deck';
+    this.pages = {};
+
     this.init();
   }
 
   async init() {
-    console.log('[Dashboard] Initializing components...');
+    console.log('[Argus] Initializing Production Operations Console...');
 
-    // Instantiate UI Components
-    this.components.vitals = new VitalsPanel('vitalsPanelContainer');
-    this.components.systemHealth = new SystemHealthPanel('systemHealthContainer');
-    this.components.stats = new StatsPanel('statsPanelContainer');
-    this.components.inventory = new InventoryGrid('inventoryGridContainer');
-    this.components.map = new MapViewer('mapCanvas');
-    this.components.logs = new LogViewer('logViewerContainer');
-    this.components.command = new CommandInput('commandInputContainer', (cmd) => this.sendCommand(cmd));
+    // Initialize App Shell
+    this.shell = new AppShell('appRoot', (viewKey) => this.switchView(viewKey));
 
-    if (!(await this.authenticate())) return;
+    // Register pages
+    this.pages = {
+      'command-deck': window.commandDeckPage,
+      'tasks': window.taskCenterPage,
+      'domains': window.domainsPage,
+      'inventory': window.inventoryStoragePage,
+      'radar': window.worldRadarPage,
+      'observability': window.observabilityPage,
+      'security': window.securityAuditPage,
+      'settings': window.settingsPage
+    };
 
-    // Connect WebSocket
-    this.connectWebSocket();
+    // Mount initial page
+    this.switchView('command-deck');
 
-    // Initial REST sync
-    await this.syncInitialState();
-  }
+    // Start freshness monitoring
+    this.freshnessTimer = setInterval(() => {
+      window.dashboardState.checkFreshness();
+    }, 1000);
 
-  async authenticate() {
-    let token = sessionStorage.getItem('argus_session_token');
-    if (!token) {
-      const password = window.prompt('Enter the Argus dashboard password:');
-      if (!password) return false;
-      const result = await window.apiClient.post('/api/auth/login', { password });
-      if (!result || !result.ok || !result.token) {
-        window.alert('Dashboard authentication failed.');
-        return false;
-      }
-      token = result.token;
-      sessionStorage.setItem('argus_session_token', token);
+    // Authentication & Connection
+    const isAuthenticated = await this.ensureAuthenticated();
+    if (isAuthenticated) {
+      this.connectWebSocket();
+      await this.syncRealState();
+      this.startPollingRealData();
     }
-    this.sessionToken = token;
-    window.apiClient.setToken(token);
-    return true;
   }
 
-  async syncInitialState() {
+  switchView(viewKey) {
+    this.activeView = viewKey;
+    const container = document.getElementById('viewContentContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const page = this.pages[viewKey];
+    if (page && typeof page.mount === 'function') {
+      page.mount(container);
+    }
+  }
+
+  async ensureAuthenticated() {
+    if (this.sessionToken) {
+      window.apiClient.setToken(this.sessionToken);
+      try {
+        const res = await window.apiClient.getStatus();
+        if (res && (res.username || res.status)) {
+          this.updateLockLabel(true);
+          return true;
+        }
+      } catch (e) {
+        // Token invalid or expired
+      }
+    }
+
+    this.showAuthModal();
+    return false;
+  }
+
+  showAuthModal() {
+    ModalDialog.showAuthModal(async (password, callbacks) => {
+      try {
+        const res = await window.apiClient.login(password);
+        if (res && res.ok && res.token) {
+          this.sessionToken = res.token;
+          sessionStorage.setItem('argus_session_token', res.token);
+          localStorage.setItem('argus_session_token', res.token);
+          window.apiClient.setToken(res.token);
+
+          callbacks.close();
+          this.updateLockLabel(true);
+
+          this.connectWebSocket();
+          await this.syncRealState();
+          this.startPollingRealData();
+        } else {
+          callbacks.showError(res.message || 'Invalid password.');
+        }
+      } catch (err) {
+        callbacks.showError(err.message || 'Authentication failed.');
+      }
+    });
+  }
+
+  handleLockClick() {
+    if (this.sessionToken) {
+      ModalDialog.showConfirmation({
+        title: 'Lock Console Session',
+        message: 'Are you sure you want to lock the operations console and terminate your active session?',
+        onConfirm: () => this.logout()
+      });
+    } else {
+      this.showAuthModal();
+    }
+  }
+
+  logout() {
+    this.sessionToken = null;
+    sessionStorage.removeItem('argus_session_token');
+    localStorage.removeItem('argus_session_token');
+    window.apiClient.setToken(null);
+    if (this.ws) {
+      try { this.ws.close(); } catch (e) {}
+    }
+    this.updateLockLabel(false);
+    window.dashboardState.setState('connection', { status: 'offline' });
+    this.showAuthModal();
+  }
+
+  updateLockLabel(isLocked) {
+    const lockText = document.getElementById('sessionLockText');
+    if (lockText) {
+      lockText.textContent = isLocked ? 'Lock' : 'Unlock';
+    }
+  }
+
+  /**
+   * Synchronizes live state across all REST endpoints.
+   */
+  async syncRealState() {
+    if (!this.sessionToken) return;
+
     try {
-      const status = await window.apiClient.getStatus();
+      // 1. Status & Server Configuration
+      const [status, serverConfig] = await Promise.all([
+        window.apiClient.getStatus(),
+        window.apiClient.getServerConfig()
+      ]);
       if (status) {
-        this.updateOnlineStatus(true);
-        if (status.health !== undefined && status.food !== undefined) {
-          this.components.vitals.updateHealth(status.health, status.food);
+        window.dashboardState.markFresh();
+        window.dashboardState.setState('bot', {
+          username: status.username || 'Argus',
+          health: status.health !== undefined ? status.health : 20,
+          food: status.food !== undefined ? status.food : 20,
+          position: status.position || { x: 0, y: 64, z: 0 }
+        });
+        if (status.currentTask) {
+          window.dashboardState.setState('tasks', {
+            activeTask: { name: status.currentTask, progress: 50 }
+          });
         }
-        if (status.position) {
-          this.components.vitals.updatePosition(status.position);
-          this.components.map.updatePosition(status.position);
-        }
-        const usernameEl = document.getElementById('botUsername');
-        if (usernameEl && status.username) {
-          usernameEl.textContent = status.username;
-        }
-        const taskEl = document.getElementById('currentTaskLabel');
-        if (taskEl && status.currentTask) {
-          taskEl.textContent = status.currentTask;
-        }
+      }
+      if (serverConfig && serverConfig.ok) {
+        window.dashboardState.setState('serverConfig', {
+          online: serverConfig.online,
+          connectionState: serverConfig.connectionState,
+          server: serverConfig.server,
+          owner: serverConfig.owner,
+          botUsername: serverConfig.botUsername,
+          authMode: serverConfig.authMode
+        });
+      } else if (status && status.server) {
+        window.dashboardState.setState('serverConfig', {
+          online: status.online,
+          connectionState: status.connectionState,
+          server: status.server,
+          owner: status.owner,
+          botUsername: status.username || 'Argus'
+        });
+      }
+
+      // 2. Navigation
+      const navStatus = await window.apiClient.getNavStatus();
+      if (navStatus) {
+        window.dashboardState.setState('navigation', navStatus);
+      }
+
+      // 3. Inventory
+      const invStatus = await window.apiClient.getInvStatus();
+      if (invStatus) {
+        window.dashboardState.setState('inventory', {
+          usedSlots: invStatus.usedSlots || 0,
+          totalSlots: invStatus.totalSlots || 36
+        });
+      }
+
+      // 4. Tools
+      const toolStatus = await window.apiClient.getToolStatus();
+      if (toolStatus) {
+        window.dashboardState.setState('tools', toolStatus);
+      }
+
+      // 5. Safety
+      const safetyStatus = await window.apiClient.getSafetyStatus();
+      if (safetyStatus) {
+        window.dashboardState.setState('safety', safetyStatus);
+      }
+
+      // 6. Domain Statistics
+      const [wood, combat, crafting, building, logistics, ambient] = await Promise.all([
+        window.apiClient.getDomainStats('woodcutting'),
+        window.apiClient.getDomainStats('combat'),
+        window.apiClient.getDomainStats('crafting'),
+        window.apiClient.getDomainStats('building'),
+        window.apiClient.getDomainStats('logistics'),
+        window.apiClient.getDomainStats('ambient')
+      ]);
+
+      const domainsUpdate = {};
+      if (wood && wood.stats) domainsUpdate.forestry = wood.stats;
+      if (combat && combat.stats) domainsUpdate.combat = combat.stats;
+      if (crafting && crafting.stats) domainsUpdate.crafting = crafting.stats;
+      if (building && building.stats) domainsUpdate.building = building.stats;
+      if (logistics && logistics.stats) domainsUpdate.logistics = logistics.stats;
+      if (ambient && ambient.ambient) domainsUpdate.behavior = ambient.ambient;
+
+      window.dashboardState.setState('domains', domainsUpdate);
+
+      // 7. Nearby Radar Entities & Coordinates
+      const radarData = await window.apiClient.getRadarEntities();
+      if (radarData && Array.isArray(radarData.entities)) {
+        window.dashboardState.setState('radarEntities', radarData.entities);
       }
     } catch (e) {
-      console.warn('[Dashboard] Initial REST sync failed:', e.message);
+      console.warn('[Sync Error]', e.message);
     }
+  }
+
+  startPollingRealData() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = setInterval(() => {
+      if (this.sessionToken) {
+        this.syncRealState();
+        this.sendPing();
+      }
+    }, 4000);
   }
 
   connectWebSocket() {
+    if (!this.sessionToken) return;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/?token=${encodeURIComponent(this.sessionToken)}`;
 
-    console.log(`[Dashboard] Connecting to WebSocket stream at ${wsUrl}...`);
-    this.ws = new WebSocket(wsUrl);
+    console.log(`[WebSocket] Connecting to ${wsUrl}...`);
+    try {
+      this.ws = new WebSocket(wsUrl);
+    } catch (err) {
+      console.error('[WebSocket Error]', err);
+      return;
+    }
 
     this.ws.onopen = () => {
-      console.log('[Dashboard] WebSocket connected.');
+      console.log('[WebSocket] Live stream connected.');
       this.reconnectAttempts = 0;
-      this.updateOnlineStatus(true);
-      this.components.logs.addLog({
-        severity: 'SUCCESS',
-        category: 'WS',
-        message: 'Connected to Argus real-time telemetry stream.'
+      window.dashboardState.setState('connection', {
+        status: 'online',
+        reconnectAttempts: 0
       });
+      window.dashboardState.markFresh();
+      this.sendPing();
     };
 
     this.ws.onmessage = (event) => {
@@ -100,522 +281,156 @@ class DashboardController {
         const payload = JSON.parse(event.data);
         this.handleEvent(payload);
       } catch (err) {
-        console.warn('[Dashboard] Non-JSON WS message received:', event.data);
+        console.warn('[WebSocket] Non-JSON payload received:', event.data);
       }
     };
 
     this.ws.onclose = () => {
-      console.warn('[Dashboard] WebSocket disconnected. Attempting auto-reconnect...');
-      this.updateOnlineStatus(false);
+      console.warn('[WebSocket] Disconnected. Reconnecting...');
+      window.dashboardState.setState('connection', { status: 'reconnecting' });
       this.scheduleReconnect();
     };
 
     this.ws.onerror = (err) => {
-      console.error('[Dashboard] WebSocket error:', err);
+      console.error('[WebSocket] Error:', err);
     };
   }
 
   scheduleReconnect() {
     this.reconnectAttempts++;
     const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), this.maxReconnectDelay);
+    window.dashboardState.setState('connection', {
+      status: 'reconnecting',
+      reconnectAttempts: this.reconnectAttempts
+    });
     setTimeout(() => {
-      this.connectWebSocket();
+      if (this.sessionToken) {
+        this.connectWebSocket();
+      }
     }, delay);
   }
 
+  sendPing() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.pingStartTime = Date.now();
+      this.ws.send(JSON.stringify({ type: 'ping' }));
+    }
+  }
+
+  /**
+   * Distributes incoming WebSocket messages to DashboardState and pages.
+   */
   handleEvent(payload) {
-    const { type, data, event, status, timestamp } = payload;
-    const eventName = type || event;
+    if (!payload || !payload.type) return;
+    window.dashboardState.markFresh();
 
-    switch (eventName) {
+    const { type, data } = payload;
+
+    switch (type) {
+      case 'pong':
+        if (this.pingStartTime) {
+          const latency = Date.now() - this.pingStartTime;
+          window.dashboardState.setState('connection', { latencyMs: latency });
+        }
+        break;
+
       case 'init':
-      case 'heartbeat':
-        if (data || status) {
-          const st = data || status;
-          if (st.health !== undefined && st.food !== undefined) {
-            this.components.vitals.updateHealth(st.health, st.food);
-          }
-          if (st.position) {
-            this.components.vitals.updatePosition(st.position);
-            this.components.map.updatePosition(st.position);
-          }
-          if (st.username) {
-            const usernameEl = document.getElementById('botUsername');
-            if (usernameEl) usernameEl.textContent = st.username;
-          }
-          if (st.currentTask) {
-            const taskEl = document.getElementById('currentTaskLabel');
-            if (taskEl) taskEl.textContent = st.currentTask;
-          }
-        }
-        break;
-
-      case 'bot.position.update':
         if (data) {
-          this.components.vitals.updatePosition(data, data.dimension);
-          this.components.map.updatePosition(data, data.yaw);
-        }
-        break;
-
-      case 'bot.health.change':
-        if (data) {
-          this.components.vitals.updateHealth(data.health, data.food);
+          window.dashboardState.setState('bot', {
+            username: data.username || 'Argus',
+            health: data.health !== undefined ? data.health : 20,
+            food: data.food !== undefined ? data.food : 20,
+            position: data.position || { x: 0, y: 64, z: 0 }
+          });
         }
         break;
 
       case 'inventory.changed':
         if (data && data.slots) {
-          this.components.inventory.updateInventory(data.slots);
+          window.dashboardState.setState('inventory', { slots: data.slots });
         }
         break;
 
-      case 'log.entry':
+      case 'bot.position.update':
+      case 'bot:position':
+      case 'bot:moved':
         if (data) {
-          this.components.logs.addLog(data);
+          window.dashboardState.setState('bot', {
+            position: data.position || { x: data.x, y: data.y, z: data.z },
+            yaw: data.yaw !== undefined ? data.yaw : 0
+          });
         }
         break;
 
-      case 'task.queued':
-        this.components.logs.addLog({
-          severity: 'INFO',
-          category: 'TASK',
-          message: `Task queued: [${data.skillName}] by ${data.requestedBy} (P:${data.priority})`
-        });
+      case 'bot.health.change':
+      case 'bot:health':
+        if (data) {
+          window.dashboardState.setState('bot', {
+            health: data.health !== undefined ? data.health : 20,
+            food: data.food !== undefined ? data.food : 20
+          });
+        }
+        break;
+
+      case 'radar.entities':
+      case 'bot.entities':
+        if (data && Array.isArray(data.entities)) {
+          window.dashboardState.setState('radarEntities', data.entities);
+        }
         break;
 
       case 'task.started':
-        {
-          const taskEl = document.getElementById('currentTaskLabel');
-          if (taskEl) taskEl.textContent = data.skillName || data.skill || 'Active';
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'TASK',
-            message: `Task running: ${data.skillName || data.skill || JSON.stringify(data)}`
-          });
-          if (data.targetCrop) {
-            this.components.vitals.updateFarmingStats(undefined, undefined, data.targetCrop);
-          }
-        }
-        break;
-
+      case 'task.queued':
       case 'task.completed':
-        {
-          const taskEl = document.getElementById('currentTaskLabel');
-          if (taskEl) taskEl.textContent = 'Idle';
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'TASK',
-            message: `Task finished: ${data.skillName || data.skill || JSON.stringify(data)}`
-          });
-        }
-        break;
-
-      case 'farming.crop_harvested':
+      case 'task.cancelled':
+      case 'task.suspended':
+      case 'task.failed':
         if (data) {
-          this.components.vitals.updateFarmingStats(data.harvestedCount, data.replantedCount, data.crop);
-        }
-        break;
-
-      case 'forestry.started':
-        if (data && this.components.stats) {
-          this.components.stats.updateForestryStarted(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'FORESTRY',
-            message: `Woodcutting started: Target [${data.treeFamily}], Goal: ${data.targetQuantity || '∞'} logs`
-          });
-        }
-        break;
-
-      case 'forestry.log_cut':
-        if (data && this.components.stats) {
-          this.components.stats.updateLogCut(data);
-        }
-        break;
-
-      case 'forestry.tree_completed':
-        if (data && this.components.stats) {
-          this.components.stats.updateTreeCompleted(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'FORESTRY',
-            message: `Tree felled (${data.family}). Trees cut: ${data.treesCut}, Logs: ${data.logsCollected}`
-          });
-        }
-        break;
-
-      case 'forestry.replanted':
-        if (data && this.components.stats) {
-          this.components.stats.updateReplanted(data);
-        }
-        break;
-
-      case 'forestry.skipped':
-        if (data && this.components.stats) {
-          this.components.stats.updateSkipped(data);
-          this.components.logs.addLog({
-            severity: 'WARN',
-            category: 'FORESTRY',
-            message: `Skipped tree at (${data.position.x}, ${data.position.y}, ${data.position.z}): ${data.reason}`
-          });
-        }
-        break;
-
-      case 'forestry.completed':
-        if (data && this.components.stats) {
-          this.components.stats.updateForestryCompleted(data);
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'FORESTRY',
-            message: `Woodcutting finished: ${data.logsCollected} logs, ${data.treesCut} trees cut, ${data.saplingsPlanted} saplings replanted.`
-          });
-        }
-        break;
-
-      case 'combat.started':
-        if (data && this.components.stats) {
-          this.components.stats.updateCombatStarted(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'COMBAT',
-            message: `Combat [${(data.mode || 'hunt').toUpperCase()}] started: targeting ${data.targetMob} (Goal: ${data.targetQuantity || '∞'})`
-          });
-        }
-        break;
-
-      case 'combat.engaged':
-        if (data && this.components.stats) {
-          this.components.stats.updateCombatEngaged(data);
-          this.components.logs.addLog({
-            severity: 'WARN',
-            category: 'COMBAT',
-            message: `Engaged hostile ${data.mobType} at (${Math.round(data.position.x)}, ${Math.round(data.position.y)}, ${Math.round(data.position.z)})`
-          });
-        }
-        break;
-
-      case 'combat.hit':
-        if (data && this.components.stats) {
-          this.components.stats.updateCombatHit(data);
-        }
-        break;
-
-      case 'combat.mob_killed':
-        if (data && this.components.stats) {
-          this.components.stats.updateCombatMobKilled(data);
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'COMBAT',
-            message: `Hostile ${data.mobType} eliminated! (${data.mobsDefeated}/${data.targetQuantity || '∞'})`
-          });
-        }
-        break;
-
-      case 'combat.retreat':
-        if (data && this.components.stats) {
-          this.components.stats.updateCombatRetreat(data);
-          this.components.logs.addLog({
-            severity: 'ERROR',
-            category: 'COMBAT',
-            message: `Health critical (${data.health} HP)! Tactical retreat initiated.`
-          });
-        }
-        break;
-
-      case 'combat.completed':
-        if (data && this.components.stats) {
-          this.components.stats.updateCombatCompleted(data);
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'COMBAT',
-            message: `Combat operation finished: ${data.mobsDefeated} hostiles eliminated in ${Math.round(data.durationMs / 1000)}s.`
-          });
-        }
-        break;
-
-      case 'crafting.started':
-        if (data && this.components.stats) {
-          this.components.stats.updateCraftingStarted(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'CRAFT',
-            message: `Crafting started: ${data.quantity || 1}x ${data.item}`
-          });
-        }
-        break;
-
-      case 'crafting.item_crafted':
-        if (data && this.components.stats) {
-          this.components.stats.updateItemCrafted(data);
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'CRAFT',
-            message: `Crafted ${data.count || 1}x ${data.item}`
-          });
-        }
-        break;
-
-      case 'smelting.started':
-        if (data && this.components.stats) {
-          this.components.stats.updateSmeltingStarted(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'SMELT',
-            message: `Smelting started: ${data.quantity || 1}x ${data.item}`
-          });
-        }
-        break;
-
-      case 'smelting.item_smelted':
-        if (data && this.components.stats) {
-          this.components.stats.updateItemSmelted(data);
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'SMELT',
-            message: `Smelted ${data.count || 1}x ${data.item}`
-          });
-        }
-        break;
-
-      case 'crafting.completed':
-        if (data && this.components.stats) {
-          this.components.stats.updateCraftingCompleted(data);
-          this.components.logs.addLog({
-            severity: data.success ? 'SUCCESS' : 'WARN',
-            category: 'CRAFT',
-            message: `Crafting/smelting task finished: ${data.item} (${data.success ? 'Success' : 'Incomplete'})`
-          });
-        }
-        break;
-
-      case 'building.started':
-        if (data && this.components.stats) {
-          this.components.stats.updateBuildingStarted(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'BUILD',
-            message: `Construction started: ${data.structure} (${data.totalBlocks} blocks of ${data.material})`
-          });
-        }
-        break;
-
-      case 'building.block_placed':
-        if (data && this.components.stats) {
-          this.components.stats.updateBlockPlaced(data);
-        }
-        break;
-
-      case 'building.completed':
-        if (data && this.components.stats) {
-          this.components.stats.updateBuildingCompleted(data);
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'BUILD',
-            message: `Construction finished: ${data.structure} complete! (${data.blocksPlaced}/${data.totalBlocks} blocks placed)`
-          });
-        }
-        break;
-
-      case 'logistics.started':
-        if (data && this.components.stats) {
-          this.components.stats.updateLogisticsStarted(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'LOGISTICS',
-            message: `Logistics operation started: [${(data.mode || 'sort').toUpperCase()}]`
-          });
-        }
-        break;
-
-      case 'logistics.chest_indexed':
-        if (data && this.components.stats) {
-          this.components.stats.updateChestIndexed(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'LOGISTICS',
-            message: `Indexed chest [${data.label || 'Storage'}] with ${data.itemCount || 0} items at (${Math.round(data.position?.x || 0)}, ${Math.round(data.position?.y || 0)}, ${Math.round(data.position?.z || 0)})`
-          });
-        }
-        break;
-
-      case 'logistics.item_transferred':
-        if (data && this.components.stats) {
-          this.components.stats.updateItemTransferred(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'LOGISTICS',
-            message: data.action === 'deposit'
-              ? `Deposited ${data.count}x ${data.item} into [${data.category}] storage`
-              : `Retrieved ${data.count}x ${data.item} from storage`
-          });
-        }
-        break;
-
-      case 'logistics.completed':
-        if (data && this.components.stats) {
-          this.components.stats.updateLogisticsCompleted(data);
-          this.components.logs.addLog({
-            severity: 'SUCCESS',
-            category: 'LOGISTICS',
-            message: `Logistics task finished: [${(data.mode || '').toUpperCase()}]`
-          });
-        }
-        break;
-
-      case 'ambient.sleep':
-        if (data && this.components.stats) {
-          this.components.stats.updateAmbientSleep(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'AMBIENT',
-            message: `Resting in bed at (${Math.round(data.bedPosition?.x || 0)}, ${Math.round(data.bedPosition?.y || 0)}, ${Math.round(data.bedPosition?.z || 0)})`
-          });
-        }
-        break;
-
-      case 'ambient.wake':
-        if (data && this.components.stats) {
-          this.components.stats.updateAmbientWake(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'AMBIENT',
-            message: `Woke up from bed (${data.reason || 'morning'}).`
-          });
-        }
-        break;
-
-      case 'ambient.ate':
-        if (data && this.components.stats) {
-          this.components.stats.updateAmbientAte(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'SURVIVAL',
-            message: `Consumed ${data.food}. Hunger replenished to ${data.currentFood}/20.`
-          });
-        }
-        break;
-
-      case 'ambient.toggled':
-        if (data && this.components.stats) {
-          this.components.stats.updateAmbientToggled(data);
-          this.components.logs.addLog({
-            severity: 'INFO',
-            category: 'AMBIENT',
-            message: `Autonomous ambient behaviors ${data.enabled ? 'ENABLED' : 'DISABLED'}.`
-          });
-        }
-        break;
-
-      case 'ai.heartbeat':
-        if (data && this.components.systemHealth) {
-          this.components.systemHealth.updateHeartbeat(data);
-        }
-        break;
-
-      case 'ai.tick_rate_changed':
-        if (data && this.components.systemHealth) {
-          this.components.systemHealth.updateTickRate(data.mode, data.tickRateMs);
-        }
-        break;
-
-      case 'module.unhealthy':
-        if (data) {
-          this.components.logs.addLog({
-            severity: 'CRITICAL',
-            category: 'HEALTH',
-            message: `Module unhealthy: ${data.module} (${data.error})`
+          const taskName = data.skill || data.skillName || data.name || (type === 'task.completed' ? null : 'Directive');
+          window.dashboardState.setState('tasks', {
+            activeTask: taskName ? { name: taskName, progress: type === 'task.completed' ? 100 : 50 } : null
           });
         }
         break;
 
       case 'dashboard.command.result':
-        if (data) {
-          if (data.status === 'clarification' && data.data && data.data.options) {
-            this.components.command.showClarification(data.message, data.data.options);
-          } else if (data.status === 'confirmation_required') {
-            this.components.command.showConfirmation(data.message);
-          }
-
-          this.components.logs.addLog({
-            severity: data.ok ? 'SUCCESS' : data.status === 'denied' ? 'WARN' : 'INFO',
-            category: 'GATEWAY',
-            message: `[Gateway ${data.status.toUpperCase()}] ${data.message}`
-          });
+      case 'command:response':
+        if (window.commandDeckPage && typeof window.commandDeckPage.handleCommandResponse === 'function') {
+          window.commandDeckPage.handleCommandResponse(data);
         }
         break;
 
-      case 'platform.info':
-        if (data) {
-          this.updatePlatformInfo(data);
+      case 'log.entry':
+      case 'log:entry':
+        if (data && window.observabilityPage && typeof window.observabilityPage.addLog === 'function') {
+          window.observabilityPage.addLog(data);
         }
         break;
-
-      case 'auth.status':
-        if (data) {
-          this.updateAuthInfo(data);
-        }
-        break;
-
-      default:
-        break;
     }
   }
 
-  sendCommand(message) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.components.logs.addLog({
-        severity: 'ERROR',
-        category: 'CMD',
-        message: 'Cannot dispatch command: WebSocket is disconnected.'
-      });
-      return;
-    }
+  sendCommand(cmd) {
+    if (!cmd || !cmd.trim()) return;
+    const trimmed = cmd.trim();
 
-    const payload = {
-      type: 'chat.command',
-      message: message,
-      timestamp: Date.now()
-    };
-
-    this.ws.send(JSON.stringify(payload));
-    this.components.logs.addLog({
-      severity: 'INFO',
-      category: 'CMD',
-      message: `Dispatched: "${message}"`
-    });
-  }
-
-  updateOnlineStatus(isOnline) {
-    const badge = document.getElementById('botStatusBadge');
-    if (badge) {
-      badge.className = `badge ${isOnline ? 'badge-online' : 'badge-offline'}`;
-      badge.textContent = isOnline ? '● Online' : '● Offline';
-    }
-  }
-
-  updatePlatformInfo(info) {
-    const platformEl = document.getElementById('platformInfoText');
-    const dataDirEl = document.getElementById('dataDirText');
-    if (platformEl && info.platform) platformEl.textContent = `Running on: ${info.platform}`;
-    if (dataDirEl && info.dataDir) dataDirEl.textContent = `Storage: ${info.dataDir}`;
-  }
-
-  updateAuthInfo(auth) {
-    const authEl = document.getElementById('authModeBadge');
-    if (authEl && auth.authMode) {
-      authEl.textContent = `Auth: ${auth.authMode.toUpperCase()}`;
-    }
-  }
-
-  quickFillCommand(commandText) {
-    const input = document.getElementById('commandInputField');
-    if (input) {
-      input.value = commandText;
-      input.focus();
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'dashboard.command',
+        message: trimmed
+      }));
+    } else {
+      window.apiClient.executeCommand(trimmed)
+        .then((res) => {
+          if (window.commandDeckPage) window.commandDeckPage.handleCommandResponse(res);
+        })
+        .catch((err) => {
+          if (window.commandDeckPage) window.commandDeckPage.handleCommandResponse({ ok: false, message: err.message });
+        });
     }
   }
 }
 
+// Global bootstrap
 document.addEventListener('DOMContentLoaded', () => {
-  window.dashboard = new DashboardController();
+  window.dashboardController = new DashboardController();
 });

@@ -43,7 +43,7 @@ class SynonymRegistry {
       go_to: ['go to', 'travel to', 'move to', 'head to', 'navigate to', 'walk to', 'run to', 'goto', 'go'],
       go_home: ['go home', 'return home', 'head home', 'back home', 'retreat home', 'home'],
       go_back: ['go back', 'return', 'back'],
-      follow: ['follow', 'come with', 'trail', 'come with me', 'follow me'],
+      follow: ['follow', 'come with', 'trail', 'come with me', 'follow me', 'come here', 'come to me', 'come'],
       stop_following: ['stop following', 'unfollow', 'stay here', 'stay'],
       store_all: ['store all', 'deposit all', 'put away all', 'stash all', 'dump inventory', 'store everything', 'empty inventory'],
       store_item: ['store', 'deposit', 'put away', 'stash'],
@@ -51,7 +51,12 @@ class SynonymRegistry {
       sort_inventory: ['sort', 'sort inventory', 'organize', 'tidy inventory', 'compact'],
       show_inventory: ['inventory', 'show inventory', 'inv', 'check inventory', 'what are you carrying'],
       status: ['status', 'how are you', 'what are you doing', 'system status', 'info'],
+      where_are_you: ['where are you', 'coords', 'coordinates', 'location', 'where r u', 'pos', 'position', 'where you at'],
+      help: ['help', 'commands', 'what can you do', 'how to use', 'guide'],
+      health_status: ['health', 'hp', 'food', 'hunger', 'vitals'],
+      uptime: ['uptime'],
       stop: ['stop', 'halt', 'cancel', 'cancel current', 'pause', 'wait', 'freeze'],
+      stop_all: ['stop all', 'emergency stop', 'cancel all', 'abort all'],
       resume: ['resume', 'continue', 'unpause'],
       grant_permission: ['grant', 'give permission', 'authorize', 'allow', 'permit'],
       revoke_permission: ['revoke', 'unauthorize', 'disallow', 'ban', 'block user'],
@@ -59,8 +64,8 @@ class SynonymRegistry {
       create_macro: ['create macro', 'define macro', 'new macro', 'record macro'],
       delete_macro: ['delete macro', 'remove macro'],
       ambient_mode: ['ambient', 'ambient mode', 'homestead', 'idle routine'],
-      sleep: ['sleep', 'nap', 'bed'],
-      wake: ['wake', 'wake up', 'get up']
+      sleep: ['sleep', 'nap', 'bed', 'go to sleep', 'rest in bed'],
+      wake: ['wake', 'wake up', 'get up', 'leave bed']
     };
 
     this.itemAliases = {

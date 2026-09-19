@@ -308,6 +308,18 @@ class PermissionManager {
       });
     }
   }
+
+  /**
+   * Health heartbeat check for AIBrain.
+   * @returns {{ ok: boolean, owner: string, blockedCount: number }}
+   */
+  ping() {
+    return {
+      ok: true,
+      owner: this.ownerUsername || 'Not Configured',
+      blockedCount: this.tempBlockedUsers ? this.tempBlockedUsers.size : 0
+    };
+  }
 }
 
 module.exports = {

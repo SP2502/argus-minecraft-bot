@@ -59,36 +59,62 @@ class BaseSkill {
   }
 
   /**
+   * Signals the skill that preemption is requested so checkpoint progress can be saved.
+   */
+  requestSuspend() {
+    this.suspendRequested = true;
+  }
+
+  /**
    * Checks whether the TaskManager has requested this task to yield / suspend.
    * @param {string} [taskId] - Optional taskId override
    * @returns {boolean}
    */
   shouldSuspend(taskId = this.currentTaskId) {
+    if (this.suspendRequested) return true;
     if (!this.ctx || !this.ctx.taskManager) return false;
-    return this.ctx.taskManager.isSuspendRequested(taskId);
+    return Boolean(taskId && this.ctx.taskManager.isSuspendRequested(taskId));
   }
 
   /**
    * Safety & preemption guard helper. Checks critical health/hunger/environment conditions
    * and checks if preemption/suspension was requested by a higher-priority task.
    * 
-   * Skills should call `await this.safetyCheckLoop()` within repetitive loops.
+   * Skills should call `await this.safetyCheckLoop(checkpointData)` within loops.
    * @param {Object} [checkpointData=null] - Optional intermediate progress data
+   * @throws {SkillSuspended} When a higher-priority task requests execution lock (checkpoint preserved)
    * @throws {SkillAbort} When safety conditions are critical or abort was requested
-   * @throws {SkillSuspended} When a higher-priority task requests execution lock
    */
   async safetyCheckLoop(checkpointData = null) {
+    // 1. Check for preemption suspension FIRST so checkpoint progress is captured!
+    if (this.shouldSuspend(this.currentTaskId)) {
+      throw new SkillSuspended(`[${this.name}] Suspended for higher priority task`, checkpointData);
+    }
+
+    // 2. Explicit cancellation or abort
     if (this.aborted) {
       throw new SkillAbort(`[${this.name}] Execution explicitly aborted.`);
     }
 
-    if (this.ctx.safety && this.ctx.safety.isCritical()) {
-      this.aborted = true;
-      throw new SkillAbort(`[${this.name}] Aborted: Health/Food is at critical threshold!`);
+    // 2.5 Autonomous Self-Survival Protocol (Auto-eat, drowning, fire, potion, shield)
+    if (this.ctx && this.ctx.safety && typeof this.ctx.safety.runSafetyProtocol === 'function') {
+      try {
+        await this.ctx.safety.runSafetyProtocol();
+      } catch (safetyErr) {
+        // Non-fatal
+      }
+    } else if (this.ctx && this.ctx.safety && typeof this.ctx.safety.checkAutoEat === 'function') {
+      try {
+        await this.ctx.safety.checkAutoEat();
+      } catch (eatErr) {
+        // Non-fatal
+      }
     }
 
-    if (this.currentTaskId && this.shouldSuspend(this.currentTaskId)) {
-      throw new SkillSuspended(`[${this.name}] Suspended for higher priority task`, checkpointData);
+    // 3. Critical safety hazard abort
+    if (this.ctx && this.ctx.safety && typeof this.ctx.safety.isCritical === 'function' && this.ctx.safety.isCritical()) {
+      this.aborted = true;
+      throw new SkillAbort(`[${this.name}] Aborted: Health/Food is at critical threshold!`);
     }
   }
 

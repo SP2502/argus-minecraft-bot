@@ -1,10 +1,39 @@
 /**
- * WebhookDispatcher - Dispatches critical operational notifications to Discord and Slack webhooks.
+ * WebhookDispatcher - Dispatches critical operational notifications to Discord, Slack, Telegram, and Generic webhooks.
  */
 class WebhookDispatcher {
-  constructor() {
-    this.discordUrl = process.env.DISCORD_WEBHOOK_URL || null;
-    this.slackUrl = process.env.SLACK_WEBHOOK_URL || null;
+  constructor(options = {}) {
+    this.discordUrl = options.discordUrl || process.env.DISCORD_WEBHOOK_URL || null;
+    this.slackUrl = options.slackUrl || process.env.SLACK_WEBHOOK_URL || null;
+    this.telegramToken = options.telegramToken || process.env.TELEGRAM_BOT_TOKEN || null;
+    this.telegramChatId = options.telegramChatId || process.env.TELEGRAM_CHAT_ID || null;
+    this.genericWebhookUrl = options.genericWebhookUrl || process.env.GENERIC_WEBHOOK_URL || null;
+
+    this.deliveryStats = {
+      totalDispatched: 0,
+      delivered: 0,
+      failed: 0,
+      lastError: null
+    };
+  }
+
+  /**
+   * Validates notification payload.
+   * @param {Object} payload
+   * @returns {{ valid: boolean, error?: string }}
+   */
+  validatePayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+      return { valid: false, error: 'Payload must be a valid object' };
+    }
+    if (!payload.message || typeof payload.message !== 'string') {
+      return { valid: false, error: 'Payload message must be a non-empty string' };
+    }
+    const validSeverities = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'SUCCESS'];
+    if (payload.severity && !validSeverities.includes(payload.severity.toUpperCase())) {
+      return { valid: false, error: `Invalid severity: ${payload.severity}` };
+    }
+    return { valid: true };
   }
 
   /**
@@ -15,11 +44,18 @@ class WebhookDispatcher {
    * @param {string} [payload.severity='INFO'] - Severity level (CRITICAL, ERROR, WARN, INFO)
    * @param {string} [payload.message=''] - Human readable text message
    * @param {Object} [payload.data={}] - Supplementary key-value telemetry
-   * @returns {Promise<boolean>} True if delivered or safely skipped
+   * @returns {Promise<{ success: boolean, results: Array }>}
    */
   async dispatch(eventType, payload = {}) {
-    if (!this.discordUrl && !this.slackUrl) {
-      return true; // No webhooks configured; skip silently
+    const validation = this.validatePayload(payload);
+    if (!validation.valid) {
+      this.deliveryStats.failed++;
+      this.deliveryStats.lastError = validation.error;
+      return { success: false, error: validation.error };
+    }
+
+    if (!this.discordUrl && !this.slackUrl && (!this.telegramToken || !this.telegramChatId) && !this.genericWebhookUrl) {
+      return { success: true, results: [] }; // No webhooks configured; skip safely
     }
 
     const {
@@ -28,14 +64,7 @@ class WebhookDispatcher {
       data = {}
     } = payload;
 
-    const formattedPayload = {
-      timestamp: new Date().toISOString(),
-      event_type: eventType,
-      severity,
-      message,
-      data
-    };
-
+    this.deliveryStats.totalDispatched++;
     const promises = [];
 
     // 1. Discord Webhook format
@@ -63,8 +92,12 @@ class WebhookDispatcher {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(discordBody)
+        }).then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return { channel: 'discord', ok: true };
         }).catch((err) => {
           console.warn('[WebhookDispatcher] Discord webhook failed:', err.message);
+          return { channel: 'discord', ok: false, error: err.message };
         })
       );
     }
@@ -80,14 +113,75 @@ class WebhookDispatcher {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(slackBody)
+        }).then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return { channel: 'slack', ok: true };
         }).catch((err) => {
           console.warn('[WebhookDispatcher] Slack webhook failed:', err.message);
+          return { channel: 'slack', ok: false, error: err.message };
         })
       );
     }
 
-    await Promise.allSettled(promises);
-    return true;
+    // 3. Telegram Bot API format
+    if (this.telegramToken && this.telegramChatId) {
+      const telegramUrl = `https://api.telegram.org/bot${this.telegramToken}/sendMessage`;
+      const telegramBody = {
+        chat_id: this.telegramChatId,
+        text: `🚨 *[Argus - ${severity}] ${eventType}*\n${message}`,
+        parse_mode: 'Markdown'
+      };
+
+      promises.push(
+        fetch(telegramUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(telegramBody)
+        }).then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return { channel: 'telegram', ok: true };
+        }).catch((err) => {
+          console.warn('[WebhookDispatcher] Telegram notification failed:', err.message);
+          return { channel: 'telegram', ok: false, error: err.message };
+        })
+      );
+    }
+
+    // 4. Generic Webhook format
+    if (this.genericWebhookUrl) {
+      const genericBody = {
+        timestamp: new Date().toISOString(),
+        eventType,
+        severity,
+        message,
+        data
+      };
+
+      promises.push(
+        fetch(this.genericWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(genericBody)
+        }).then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return { channel: 'generic', ok: true };
+        }).catch((err) => {
+          console.warn('[WebhookDispatcher] Generic webhook failed:', err.message);
+          return { channel: 'generic', ok: false, error: err.message };
+        })
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const anyFailed = results.some(r => !r.ok);
+    if (anyFailed) {
+      this.deliveryStats.failed++;
+      this.deliveryStats.lastError = results.filter(r => !r.ok).map(r => `${r.channel}: ${r.error}`).join('; ');
+    } else {
+      this.deliveryStats.delivered++;
+    }
+
+    return { success: !anyFailed, results };
   }
 }
 

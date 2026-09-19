@@ -122,8 +122,43 @@ module.exports = {
       resultCount: 1,
       requiresTable: true
     },
+    wooden_sword: {
+      ingredients: [{ name: 'oak_planks', count: 2 }, { name: 'stick', count: 1 }],
+      resultCount: 1,
+      requiresTable: true
+    },
+    stone_sword: {
+      ingredients: [{ name: 'cobblestone', count: 2 }, { name: 'stick', count: 1 }],
+      resultCount: 1,
+      requiresTable: true
+    },
     iron_sword: {
       ingredients: [{ name: 'iron_ingot', count: 2 }, { name: 'stick', count: 1 }],
+      resultCount: 1,
+      requiresTable: true
+    },
+    diamond_sword: {
+      ingredients: [{ name: 'diamond', count: 2 }, { name: 'stick', count: 1 }],
+      resultCount: 1,
+      requiresTable: true
+    },
+    wooden_shovel: {
+      ingredients: [{ name: 'oak_planks', count: 1 }, { name: 'stick', count: 2 }],
+      resultCount: 1,
+      requiresTable: true
+    },
+    stone_shovel: {
+      ingredients: [{ name: 'cobblestone', count: 1 }, { name: 'stick', count: 2 }],
+      resultCount: 1,
+      requiresTable: true
+    },
+    iron_shovel: {
+      ingredients: [{ name: 'iron_ingot', count: 1 }, { name: 'stick', count: 2 }],
+      resultCount: 1,
+      requiresTable: true
+    },
+    diamond_shovel: {
+      ingredients: [{ name: 'diamond', count: 1 }, { name: 'stick', count: 2 }],
       resultCount: 1,
       requiresTable: true
     },

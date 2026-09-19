@@ -52,7 +52,8 @@ class NavigationSkill extends BaseSkill {
    * @private
    */
   async _executeFollow(playerName, distance = 3) {
-    const playerObj = this.bot.players[playerName];
+    const playerObj = this.bot.players[playerName] || 
+      Object.values(this.bot.players || {}).find(p => p && p.username && p.username.toLowerCase() === playerName.toLowerCase());
     if (!playerObj) {
       throw new Error(`Player '${playerName}' is not connected to the server.`);
     }

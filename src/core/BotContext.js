@@ -14,10 +14,12 @@ const { PermissionManager } = require('../modules/security');
 const MessageRouter = require('../shared/communication/MessageRouter');
 const WebhookDispatcher = require('../shared/communication/WebhookDispatcher');
 
+const GoalPlannerService = require('../shared/services/goal-planner.service');
+
 // Unified Command & NLP Subsystem
 const conversationContext = require('../modules/commands/ConversationContextManager');
 const confirmations = require('../modules/commands/ConfirmationManager');
-const intentParser = require('../modules/nlp/IntentParser');
+const nlp = require('../modules/nlp');
 const CommandPlanner = require('../modules/commands/CommandPlanner');
 const UnifiedCommandGateway = require('../modules/commands/UnifiedCommandGateway');
 
@@ -52,6 +54,7 @@ class BotContext {
     this.logistics = new LogisticsService(bot, this);
     this.ambient = new AmbientBehaviorService(bot, this);
     this.humanoid = new HumanoidBehaviorService(bot, this);
+    this.goalPlanner = new GoalPlannerService(bot, this);
 
     // 2. Infrastructure, Security, & Communication
     this.webhooks = new WebhookDispatcher();
@@ -64,11 +67,17 @@ class BotContext {
     // 3. Natural Language Understanding & Unified Command Gateway
     this.conversationContext = conversationContext;
     this.confirmations = confirmations;
-    this.nlp = intentParser;
+    this.nlp = nlp;
+    this.intentParser = nlp.intentParser;
     this.commandPlanner = new CommandPlanner(this);
     this.commandGateway = new UnifiedCommandGateway(this);
 
     this.currentTask = null;
+
+    // Initialize combat whitelist: owner and bot itself are always protected from attack
+    const ownerName = process.env.OWNER_USERNAME || 'ShadowPace2502';
+    const selfName = bot.username || 'Argus';
+    this.combat.setWhitelist([ownerName, selfName, 'ShadowPace2502']);
   }
 
   /**

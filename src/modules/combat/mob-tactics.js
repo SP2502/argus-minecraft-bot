@@ -393,7 +393,7 @@ class MobTactics {
       }
     };
 
-    // Helper: Strike target
+    // Helper: Strike target with sprint-jump critical hit combo for maximum damage
     const strikeTarget = async (aimOffset = null) => {
       lowerShield();
       if (ctx && ctx.combat && typeof ctx.combat.equipBestWeapon === 'function') {
@@ -407,6 +407,14 @@ class MobTactics {
         } catch (e) {}
       }
 
+      // Sprint-jump critical hit: jump just before striking for 50% bonus damage
+      if (typeof bot.setControlState === 'function') {
+        bot.setControlState('sprint', true);
+        bot.setControlState('jump', true);
+        await new Promise((r) => setTimeout(r, 80));
+        bot.setControlState('jump', false);
+      }
+
       if (typeof bot.attack === 'function') {
         bot.attack(targetEntity);
         if (ctx && ctx.events) {
@@ -415,6 +423,23 @@ class MobTactics {
       }
 
       await new Promise((r) => setTimeout(r, combatConfig.ATTACK_COOLDOWN_MS));
+
+      // Follow-up second hit if target still alive (combo)
+      const stillAlive = targetEntity.isValid && !(targetEntity.metadata && targetEntity.metadata[7] <= 0);
+      if (stillAlive && typeof bot.attack === 'function') {
+        if (typeof bot.lookAt === 'function') {
+          try { await bot.lookAt(targetPos.offset(offset.x, offset.y, offset.z)); } catch (e) {}
+        }
+        bot.attack(targetEntity);
+        if (ctx && ctx.events) {
+          ctx.events.emit('combat.combo_hit', { target: mobName, tactic });
+        }
+        await new Promise((r) => setTimeout(r, combatConfig.ATTACK_COOLDOWN_MS));
+      }
+
+      if (typeof bot.setControlState === 'function') {
+        bot.setControlState('sprint', false);
+      }
     };
 
     // ─── TACTICAL EXECUTION BRANCHES ─────────────────────────────────────────

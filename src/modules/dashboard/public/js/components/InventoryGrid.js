@@ -1,6 +1,7 @@
 /**
  * InventoryGrid Component
- * Renders player inventory as a 9x4 interactive slot grid with tooltips and counts.
+ * Renders player inventory as an interactive 9x4 slot matrix with hotbar separation,
+ * durability bars for damaged tools, and real item stack counts.
  */
 class InventoryGrid {
   constructor(containerId) {
@@ -19,34 +20,53 @@ class InventoryGrid {
   }
 
   generateSlotsHtml() {
-    let html = '';
+    let html = '<div class="inv-row" style="margin-bottom: 6px;">';
     // Main inventory slots 0-26 (slots 9-35 in Minecraft indexing)
     for (let i = 0; i < 27; i++) {
-      const item = this.slots[i];
-      html += this.renderSlotHtml(i, item);
+      if (i > 0 && i % 9 === 0) {
+        html += '</div><div class="inv-row" style="margin-bottom: 6px;">';
+      }
+      html += this.renderSlotHtml(i, this.slots[i]);
     }
+    html += '</div>';
+
     // Hotbar divider
     html += `<div class="hotbar-divider"></div>`;
+
     // Hotbar slots 27-35 (slots 36-44 in Minecraft indexing)
+    html += '<div class="inv-row">';
     for (let i = 27; i < 36; i++) {
-      const item = this.slots[i];
-      html += this.renderSlotHtml(i, item, true);
+      html += this.renderSlotHtml(i, this.slots[i], true);
     }
+    html += '</div>';
+
     return html;
   }
 
   renderSlotHtml(index, item, isHotbar = false) {
+    const hotbarNum = isHotbar ? `<span style="position: absolute; top: 2px; left: 3px; font-size: 8px; color: var(--text-muted);">${index - 26}</span>` : '';
+
     if (!item) {
-      return `<div class="inv-slot ${isHotbar ? 'hotbar-slot' : ''}" title="Empty Slot ${index + 1}"></div>`;
+      return `
+        <div class="inv-slot ${isHotbar ? 'hotbar-slot' : ''}" title="Empty Slot ${index + 1}">
+          ${hotbarNum}
+        </div>
+      `;
     }
 
     const cleanName = item.name.replace(/_/g, ' ');
-    const title = `${cleanName} (x${item.count})${item.durability ? ` - ${item.durability}% Durability` : ''}`;
+    const durability = typeof item.durability === 'number' ? item.durability : null;
+    const durClass = durability !== null ? (durability <= 5 ? 'crit' : durability <= 20 ? 'warn' : '') : '';
+    const durBar = durability !== null ? `<div class="inv-durability-bar ${durClass}" style="width: ${durability}%;"></div>` : '';
+
+    const title = `${cleanName} (Count: ${item.count || 1})${durability !== null ? ` • ${durability}% Durability` : ''}`;
 
     return `
       <div class="inv-slot ${isHotbar ? 'hotbar-slot' : ''}" title="${title}">
+        ${hotbarNum}
         <span class="inv-slot-name">${cleanName}</span>
-        <span class="inv-slot-count">${item.count > 1 ? item.count : ''}</span>
+        ${item.count > 1 ? `<span class="inv-slot-count">${item.count}</span>` : ''}
+        ${durBar}
       </div>
     `;
   }
@@ -56,6 +76,7 @@ class InventoryGrid {
 
     if (Array.isArray(items)) {
       items.forEach((item, idx) => {
+        if (!item) return;
         // Map slot index appropriately
         const slotIdx = item.slot !== undefined ? item.slot : idx;
         if (slotIdx >= 0 && slotIdx < 36) {
@@ -66,11 +87,6 @@ class InventoryGrid {
       });
     }
 
-    const gridContainer = document.getElementById('inventorySlotsContainer');
-    if (gridContainer) {
-      gridContainer.innerHTML = this.generateSlotsHtml();
-    }
+    this.render();
   }
 }
-
-window.InventoryGrid = InventoryGrid;

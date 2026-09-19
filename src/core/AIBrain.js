@@ -54,6 +54,40 @@ class AIBrain {
     if (this.ctx.humanoid) {
       this.registerModule('HumanoidBehaviorService', () => this.ctx.humanoid.ping());
     }
+    if (this.ctx.actionQueue) {
+      this.registerModule('ActionQueueService', () => this.ctx.actionQueue.ping());
+    }
+    if (this.ctx.logistics) {
+      this.registerModule('LogisticsService', () => this.ctx.logistics.ping());
+    }
+    if (this.ctx.crafting) {
+      this.registerModule('CraftingService', () => this.ctx.crafting.ping());
+    }
+    if (this.ctx.target) {
+      this.registerModule('TargetFinderService', () => this.ctx.target.ping());
+    }
+    if (this.ctx.permissionManager) {
+      this.registerModule('PermissionManager', () => this.ctx.permissionManager.ping());
+    }
+    if (this.ctx.taskManager) {
+      this.registerModule('TaskManager', () => this.ctx.taskManager.ping());
+    }
+    if (this.ctx.serverAuth) {
+      this.registerModule('ServerAuthManager', () => this.ctx.serverAuth.ping());
+    }
+    if (this.ctx.commandGateway) {
+      this.registerModule('UnifiedCommandGateway', () => this.ctx.commandGateway.ping());
+    }
+    if (this.ctx.messageRouter) {
+      this.registerModule('MessageRouter', () => this.ctx.messageRouter.ping());
+    }
+    if (this.ctx.skills && this.ctx.skills.registry) {
+      this.registerModule('SkillRegistry', () => ({ ok: Object.keys(this.ctx.skills.registry).length >= 8 }));
+    }
+    if (this.ctx.nlp) {
+      this.registerModule('NLP', () => (typeof this.ctx.nlp.ping === 'function' ? this.ctx.nlp.ping() : { ok: true }));
+      this.registerModule('IntentParser', () => (typeof this.ctx.nlp.ping === 'function' ? this.ctx.nlp.ping() : { ok: true }));
+    }
   }
 
   /**
@@ -171,6 +205,21 @@ class AIBrain {
   async tick() {
     if (!this.ctx) return;
 
+    // 0. Continuous Self-Safety & Survival Protocol (Auto-eat, drowning, fire, potion, shield)
+    if (this.ctx.safety && typeof this.ctx.safety.runSafetyProtocol === 'function') {
+      try {
+        await this.ctx.safety.runSafetyProtocol();
+      } catch (safetyErr) {
+        // Non-fatal
+      }
+    } else if (this.ctx.safety && typeof this.ctx.safety.checkAutoEat === 'function') {
+      try {
+        await this.ctx.safety.checkAutoEat();
+      } catch (eatErr) {
+        // Non-fatal
+      }
+    }
+
     // 1. Critical Safety & Survival Guard
     if (this.ctx.safety && this.ctx.safety.isCritical()) {
       this.setTickRate('combat');
@@ -228,7 +277,9 @@ class AIBrain {
       if (snapshot.queue.length > 0) {
         this.setTickRate('active');
         this.lastActiveTime = Date.now();
-        await this.ctx.taskManager.runNext();
+        this.ctx.taskManager.runNext().catch((err) => {
+          console.error('[AIBrain] Error during task execution:', err.message);
+        });
         return;
       }
     }

@@ -104,8 +104,8 @@ class EntityExtractor {
         entities.item = canonical;
 
         // Specific ore vs crop slot assignment
-        if (['diamond', 'iron_ingot', 'iron_ore', 'gold_ingot', 'gold_ore', 'coal', 'copper_ingot', 'redstone', 'lapis_lazuli', 'emerald', 'netherite_ingot'].includes(canonical)) {
-          entities.targetOre = canonical.replace('_ingot', '').replace('_ore', '');
+        if (['diamond', 'iron_ingot', 'iron_ore', 'gold_ingot', 'gold_ore', 'coal', 'copper_ingot', 'redstone', 'lapis_lazuli', 'emerald', 'netherite_ingot', 'stone', 'cobblestone', 'deepslate', 'quartz', 'ancient_debris'].includes(canonical)) {
+          entities.targetOre = canonical === 'lapis_lazuli' ? 'lapis' : canonical.replace('_ingot', '').replace('_ore', '');
         } else if (['wheat', 'carrot', 'potato', 'beetroot', 'melon', 'pumpkin', 'sugar_cane', 'bamboo', 'nether_wart', 'cocoa_beans'].includes(canonical)) {
           entities.crop = canonical.replace('_beans', '');
         }

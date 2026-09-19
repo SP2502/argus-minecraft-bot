@@ -175,6 +175,19 @@ class IntentParser {
 
     return null;
   }
+
+  /**
+   * Health ping for AIBrain subsystem audit.
+   * @returns {{ ok: boolean, module: string, intentsLoaded: number }}
+   */
+  ping() {
+    const count = intentRegistry.getAllIntents().length;
+    return {
+      ok: count > 0,
+      module: 'IntentParser',
+      intentsLoaded: count
+    };
+  }
 }
 
 module.exports = new IntentParser();

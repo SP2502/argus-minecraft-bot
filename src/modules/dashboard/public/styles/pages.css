@@ -1,0 +1,460 @@
+/**
+ * Argus Page Styles
+ * Layouts for Command Deck, Task Center, Domains, Radar, Observability, and Inventory.
+ */
+
+/* ==========================================================================
+   Command Deck (Split Terminal Layout)
+   ========================================================================== */
+.command-deck-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.command-split-pane {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 480px;
+}
+
+@media (max-width: 1024px) {
+  .command-split-pane {
+    grid-template-columns: 1fr;
+  }
+}
+
+.terminal-history-pane {
+  background: #060910;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 520px;
+}
+
+.terminal-header {
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--type-metadata);
+  color: var(--text-muted);
+}
+
+.terminal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.terminal-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.terminal-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.terminal-entry-time {
+  color: var(--text-muted);
+}
+
+.terminal-entry-source {
+  color: var(--cyan-400);
+}
+
+.terminal-entry-cmd {
+  color: #fff;
+  font-weight: 600;
+}
+
+.terminal-entry-result {
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.terminal-entry-result.success {
+  border-left: 2px solid var(--status-success);
+}
+
+.terminal-entry-result.error {
+  border-left: 2px solid var(--status-danger);
+  color: var(--status-danger);
+}
+
+/* Command Plan & Preview Pane */
+.command-preview-pane {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 520px;
+  overflow-y: auto;
+}
+
+.preview-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.lifecycle-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.step-node.completed {
+  color: var(--status-success);
+}
+
+.step-node.active {
+  color: var(--cyan-400);
+  font-weight: 700;
+}
+
+.step-circle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
+  background: var(--bg-canvas);
+}
+
+.step-node.completed .step-circle {
+  background: var(--status-success);
+  border-color: var(--status-success);
+}
+
+.step-node.active .step-circle {
+  background: var(--cyan-400);
+  border-color: var(--cyan-400);
+  box-shadow: 0 0 8px var(--cyan-400);
+}
+
+.command-input-bar {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quick-directives-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   SVG World Radar Page
+   ========================================================================== */
+.radar-station-container {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  flex: 1;
+}
+
+@media (max-width: 960px) {
+  .radar-station-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.radar-viewport-card {
+  background: #04070d;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 480px;
+}
+
+.radar-svg-container {
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 1 / 1;
+}
+
+.radar-controls-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ==========================================================================
+   Inventory & Storage
+   ========================================================================== */
+.inventory-page-container {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .inventory-page-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inv-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+}
+
+.inv-slot-box {
+  aspect-ratio: 1 / 1;
+  background: #070c18;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.inv-slot-box:hover {
+  background: #0d172e;
+  border-color: var(--cyan-400);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.inv-slot-box.hotbar {
+  border-color: rgba(0, 229, 255, 0.25);
+}
+
+.inv-slot-box .slot-number {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 8px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.inv-slot-box .item-count {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+.inv-slot-box .item-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Homepage Vitals & Real-Time Status HUD Strip
+   ========================================================================== */
+.homepage-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 1200px) {
+  .homepage-vitals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .homepage-vitals-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vital-card {
+  background: #060910;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.vital-card:hover {
+  border-color: var(--border-medium);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.vital-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vital-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.vital-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.vital-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.vital-value-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.vital-large-val {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.vital-max-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.vital-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+
+.vital-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.35s ease, background-color 0.35s ease;
+}
+
+.vital-bar-fill.health-fill {
+  background: linear-gradient(90deg, #10b981, #00e5ff);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.vital-bar-fill.food-fill {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.vital-coords-val {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cyan-400);
+  padding: 4px 0;
+}
+
+.vital-operation-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  padding: 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vital-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+

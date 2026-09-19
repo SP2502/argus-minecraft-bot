@@ -464,6 +464,18 @@ class LogisticsService {
       this.bot.inventory.items().push({ name: itemName, count });
     }
   }
+
+  /**
+   * Health heartbeat check for AIBrain.
+   * @returns {{ ok: boolean, indexedChests: number, isIndexing: boolean }}
+   */
+  ping() {
+    return {
+      ok: true,
+      indexedChests: this.chests ? this.chests.size : 0,
+      isIndexing: Boolean(this.isIndexing)
+    };
+  }
 }
 
 module.exports = LogisticsService;

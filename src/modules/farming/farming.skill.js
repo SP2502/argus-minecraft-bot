@@ -88,7 +88,8 @@ class FarmSkill extends BaseSkill {
 
       // 3. NAVIGATE TO CROP (Navigation Service)
       const navResult = await this.ctx.nav.goTo(freshBlock.position, { range: 2 });
-      if (!navResult.success) {
+      const navOk = navResult === true || (navResult && navResult.success === true);
+      if (!navOk) {
         continue;
       }
 
@@ -176,10 +177,23 @@ class FarmSkill extends BaseSkill {
       return true; // Melon/pumpkin presence indicates harvestability
     }
 
-    // In modern prismarine-block, age is stored in metadata or properties.age
-    const age = block.metadata !== undefined
-      ? block.metadata
-      : (block._properties && block._properties.age ? parseInt(block._properties.age, 10) : 0);
+    // MC 1.21+: block properties are in block.getProperties() or block._properties
+    // Legacy: block.metadata
+    let age = 0;
+    try {
+      if (typeof block.getProperties === 'function') {
+        const props = block.getProperties();
+        if (props && props.age !== undefined) {
+          age = parseInt(props.age, 10);
+        }
+      } else if (block._properties && block._properties.age !== undefined) {
+        age = parseInt(block._properties.age, 10);
+      } else if (block.metadata !== undefined) {
+        age = block.metadata;
+      }
+    } catch (e) {
+      age = block.metadata !== undefined ? block.metadata : 0;
+    }
 
     return age >= crop.maxAge;
   }

@@ -21,6 +21,7 @@ const SEVERITY_STYLES = {
   SUCCESS: { color: COLORS.green, badge: ' OK  ' },
   WARN: { color: COLORS.yellow, badge: 'WARN ' },
   ERROR: { color: COLORS.red, badge: 'ERROR' },
+  CRITICAL: { color: COLORS.red, badge: 'CRIT!' },
   DEBUG: { color: COLORS.gray, badge: 'DEBUG' },
   NETWORK: { color: COLORS.blue, badge: 'NETWR' },
   AUTH: { color: COLORS.yellow, badge: ' AUTH' },
@@ -125,6 +126,10 @@ class Logger {
 
   error(category, message, details = null) {
     this.log('ERROR', category, message, details);
+  }
+
+  critical(category, message, details = null) {
+    this.log('CRITICAL', category, message, details);
   }
 
   debug(category, message, details = null) {
