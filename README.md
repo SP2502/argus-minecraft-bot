@@ -1,4 +1,4 @@
-# Argus
+# Argus (Beta)
 
 ### An autonomous Minecraft Java Edition bot built around modular automation, persistent state, and self-directed behavior.
 
