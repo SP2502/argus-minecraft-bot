@@ -20,6 +20,8 @@ let chatAdapter = null;
 let lastHealth = 20;
 let initialHealthReceived = false;
 let isShuttingDown = false;
+let isConnecting = false;
+let isConnected = false;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
 const BASE_RECONNECT_DELAY_MS = 5000;
@@ -30,6 +32,16 @@ const stateStore = new StateStore();
 // Dynamic BotContext proxy so API server and WebSocket remain valid across reconnects
 const ctxProxy = new Proxy({}, {
   get(target, prop) {
+    if (prop === 'reconnectBot') {
+      return (newConfig) => {
+        eventBus.emit('bot:reconnect', newConfig || {
+          host: process.env.MC_HOST,
+          port: parseInt(process.env.MC_PORT, 10),
+          username: process.env.MC_USERNAME,
+          authMode: process.env.AUTH_MODE
+        });
+      };
+    }
     if (!botContext) return undefined;
     const val = botContext[prop];
     if (typeof val === 'function') {
@@ -39,11 +51,36 @@ const ctxProxy = new Proxy({}, {
   }
 });
 
+// Listener for dynamic server/username reconnect directives
+eventBus.on('bot:reconnect', (newConfig) => {
+  const targetHost = (newConfig && newConfig.host) || process.env.MC_HOST || 'localhost';
+  const targetPort = (newConfig && newConfig.port) || process.env.MC_PORT || 25565;
+  const currentBotName = (newConfig && newConfig.username) || process.env.MC_USERNAME || 'Argus';
+  const currentAuth = (newConfig && newConfig.authMode) || process.env.AUTH_MODE || 'offline';
+
+  logger.network('RECONNECT', `Received bot reconnect directive: ${targetHost}:${targetPort} as '${currentBotName}' (${currentAuth}). Disconnecting current bot...`);
+  cleanupBot();
+  reconnectAttempts = 0;
+  setTimeout(() => {
+    initBot();
+  }, 1000);
+});
+
 /**
  * Starts or restarts the Mineflayer bot instance and lifecycle listeners.
  */
 function initBot() {
   if (isShuttingDown) return;
+  if (isConnecting || isConnected) {
+    logger.network('MINEFLAYER', `initBot skipped: already connecting (${isConnecting}) or connected (${isConnected}).`);
+    return;
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  isConnecting = true;
 
   const targetHost = process.env.MC_HOST || 'localhost';
   const targetPort = process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : 25565;
@@ -56,10 +93,16 @@ function initBot() {
     bot = authManager.createBot();
     initialHealthReceived = false;
 
+    if (bot && bot._client) {
+      bot._client.on('error', (err) => {
+        logger.warn('MINEFLAYER', `Low-level protocol client error: ${err.message}`);
+      });
+    }
+
     // GrimAC & Modern Anti-Cheat Movement Fix (Mineflayer Issue #3791)
     // Send expected tick_end packet on physics ticks ONLY if supported by the server protocol (1.21.3+)
     bot.on('physicTick', () => {
-      if (bot._client && bot._client.state === 'play' && bot.registry) {
+      if (bot && bot._client && bot._client.state === 'play' && bot._client.socket && !bot._client.socket.destroyed && bot.registry) {
         try {
           const toServer = bot.registry.protocol && bot.registry.protocol.play && bot.registry.protocol.play.toServer;
           if (toServer && toServer.types && toServer.types.packet_tick_end) {
@@ -99,6 +142,13 @@ function initBot() {
     });
 
     bot.on('login', () => {
+      isConnecting = false;
+      isConnected = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+      reconnectAttempts = 0;
       logger.success('MINEFLAYER', `Handshake authenticated. Logged in as '${bot.username}' (${authMode.toUpperCase()} mode).`);
       eventBus.emit('log:entry', {
         severity: 'SUCCESS',
@@ -108,6 +158,12 @@ function initBot() {
     });
 
     bot.once('spawn', () => {
+      isConnecting = false;
+      isConnected = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
       reconnectAttempts = 0; // Reset exponential backoff on successful server connection
       const posX = bot.entity ? Math.round(bot.entity.position.x) : 0;
       const posY = bot.entity ? Math.round(bot.entity.position.y) : 0;
@@ -132,6 +188,41 @@ function initBot() {
         aiBrain.start();
         const botName = bot.username || process.env.MC_USERNAME || 'Bot';
         logger.info('AIBRAIN', `${botName} autonomous brain active and idling safely.`);
+
+        // Restore any pending tasks that were interrupted by the last disconnect/death
+        if (botContext && botContext.taskManager && typeof botContext.taskManager.restoreQueue === 'function') {
+          botContext.taskManager.restoreQueue().then((count) => {
+            if (count > 0 && botContext.messageRouter) {
+              botContext.messageRouter.send(3, `🔄 Resuming ${count} interrupted task(s) from before disconnect.`);
+            }
+          }).catch(() => {});
+        }
+
+        // ─── ULTRA SELF-DEFENSE: Proactive 500ms combat scan ───────────────────
+        // Scans every 500ms for nearby hostiles and engages automatically.
+        // Yields to high-priority tasks (player commands) and always protects owner.
+        if (botContext && botContext.combat) {
+          const combatScanInterval = setInterval(() => {
+            if (!bot || !bot.entity || !botContext || !botContext.combat) {
+              clearInterval(combatScanInterval);
+              return;
+            }
+            // Only engage if not currently running a high-priority task from a player command
+            const currentTask = botContext.taskManager && botContext.taskManager.currentTask;
+            const isHighPriorityTask = currentTask && (currentTask.priority >= 80) && currentTask.requestedBy !== 'system' && currentTask.requestedBy !== 'AmbientScheduler' && currentTask.requestedBy !== 'restored';
+
+            if (isHighPriorityTask) return; // Yield to player commands
+
+            const threat = botContext.combat.getImmediateThreat(16);
+            if (threat && !botContext.combat.isAlly(threat)) {
+              // Non-blocking attack: run in background
+              botContext.combat.defendAgainst(threat).catch(() => {});
+            }
+          }, 500);
+
+          // Store so we can clear on cleanup
+          bot._combatScanInterval = combatScanInterval;
+        }
       }, 2000);
 
       eventBus.emit('bot:ready', { username: bot.username });
@@ -213,16 +304,28 @@ function initBot() {
 
     bot.on('death', () => {
       logger.warn('MINEFLAYER', 'Bot died. Respawning in 1.5 seconds...');
+      if (botContext && botContext.safety && typeof botContext.safety.resetDamageTracker === 'function') {
+        botContext.safety.resetDamageTracker();
+      }
       setTimeout(() => {
         try {
           if (bot && typeof bot.respawn === 'function') {
             bot.respawn();
             logger.info('MINEFLAYER', 'Respawn packet dispatched.');
+            if (botContext && botContext.safety && typeof botContext.safety.resetDamageTracker === 'function') {
+              botContext.safety.resetDamageTracker();
+            }
           }
         } catch (e) {
           logger.warn('MINEFLAYER', `Respawn error: ${e.message}`);
         }
       }, 1500);
+    });
+
+    bot.on('respawn', () => {
+      if (botContext && botContext.safety && typeof botContext.safety.resetDamageTracker === 'function') {
+        botContext.safety.resetDamageTracker();
+      }
     });
 
     bot.on('health', () => {
@@ -247,6 +350,11 @@ function initBot() {
             botContext.combat.handleUnderAttack().catch((err) => {
               logger.warn('COMBAT', `Defense retaliation error: ${err.message}`);
             });
+          }
+
+          // Instantly trigger safety protocols (auto-eat saturation heal, fire douse, shield)
+          if (typeof botContext.safety.runSafetyProtocol === 'function') {
+            botContext.safety.runSafetyProtocol().catch(() => {});
           }
         }
         lastHealth = bot.health !== undefined ? bot.health : 20;
@@ -273,6 +381,9 @@ function initBot() {
         botContext.combat.handleUnderAttack().catch((err) => {
           logger.warn('COMBAT', `entityHurt defense retaliation error: ${err.message}`);
         });
+      }
+      if (botContext && botContext.safety && typeof botContext.safety.runSafetyProtocol === 'function') {
+        botContext.safety.runSafetyProtocol().catch(() => {});
       }
     });
 
@@ -333,6 +444,8 @@ function initBot() {
       if (botContext && botContext.messageRouter) {
         botContext.messageRouter.send(1, `Mineflayer error: ${err.message}`, { eventType: 'BOT_ERROR', error: err.message });
       }
+      cleanupBot();
+      scheduleReconnect();
     });
 
     bot.on('end', (reason) => {
@@ -381,6 +494,12 @@ function formatKickReason(reason) {
  * Cleans up existing bot sub-components before reconnecting.
  */
 function cleanupBot() {
+  isConnected = false;
+  isConnecting = false;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   if (aiBrain) {
     try { aiBrain.stop(); } catch (e) {}
     aiBrain = null;
@@ -393,7 +512,25 @@ function cleanupBot() {
     try { botContext.nav.stopFollowing(); } catch (e) {}
   }
   if (botContext && botContext.taskManager) {
+    // Persist queue BEFORE cancelling, so reconnect can restore pending tasks
+    try { botContext.taskManager._persistQueue(); } catch (e) {}
     try { botContext.taskManager.cancelAll('reconnecting'); } catch (e) {}
+  }
+  // Clear proactive combat scan interval
+  if (bot && bot._combatScanInterval) {
+    try { clearInterval(bot._combatScanInterval); } catch (e) {}
+    bot._combatScanInterval = null;
+  }
+  if (bot) {
+    try {
+      bot.removeAllListeners();
+      if (typeof bot.quit === 'function') {
+        bot.quit();
+      } else if (bot._client && typeof bot._client.end === 'function') {
+        bot._client.end();
+      }
+    } catch (e) {}
+    bot = null;
   }
 }
 
@@ -403,7 +540,7 @@ function cleanupBot() {
  * @param {boolean} [isCustomReason=false] - Whether this is a custom delay without incrementing exponential attempts
  */
 function scheduleReconnect(explicitDelayMs = null, isCustomReason = false) {
-  if (isShuttingDown || reconnectTimer) return;
+  if (isShuttingDown || reconnectTimer || isConnecting || isConnected) return;
 
   let delayMs;
   if (explicitDelayMs !== null) {
@@ -509,10 +646,27 @@ async function shutdown(signal) {
 
   await stateStore.disconnect();
 
-  if (apiServer && apiServer.server) {
-    apiServer.server.close(() => {
-      console.log('[Shutdown] API server closed.');
-    });
+  if (apiServer) {
+    try {
+      if (apiServer.wss) {
+        if (apiServer.wss.clients) {
+          for (const client of apiServer.wss.clients) {
+            try { client.terminate(); } catch (e) {}
+          }
+        }
+        apiServer.wss.close();
+      }
+      if (apiServer.server) {
+        await new Promise((resolve) => {
+          apiServer.server.close(() => {
+            console.log('[Shutdown] API server closed.');
+            resolve();
+          });
+        });
+      }
+    } catch (serverErr) {
+      console.warn('[Shutdown] Error closing API server:', serverErr.message);
+    }
   }
 
   console.log('[Shutdown] Shutdown complete. Goodbye!');
@@ -521,6 +675,18 @@ async function shutdown(signal) {
 
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+process.on('uncaughtException', (err) => {
+  logger.warn('PROCESS', `Caught unhandled exception: ${err.message}`);
+  if (err.message && (err.message.includes('timed out') || err.message.includes('PartialReadError') || err.message.includes('ECONNRESET') || err.message.includes('VarInt'))) {
+    cleanupBot();
+    scheduleReconnect();
+  }
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.warn('PROCESS', `Caught unhandled rejection: ${reason}`);
+});
 
 // Execute bot bootstrap
 bootstrap();

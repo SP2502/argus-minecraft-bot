@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
+    "dashboard": "node scripts/start-dashboard.js",
     "test": "node --test"
   },
   "keywords": [
