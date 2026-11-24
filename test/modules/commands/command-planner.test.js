@@ -142,3 +142,12 @@ test('CommandPlanner - Single and Compound Sequential Plans', async () => {
   assert.strictEqual(planCompound.operations[1].intentName, 'go_home');
   assert.ok(planCompound.operations[1].dependsOn.includes(planCompound.operations[0].operationId));
 });
+
+test('CommandPlanner sets retrace mode on the navigation operation', async () => {
+  const planner = new CommandPlanner({});
+  const plan = await planner.plan(intentParser.parse('retrace steps'));
+
+  assert.strictEqual(plan.operations[0].intentName, 'retrace_steps');
+  assert.strictEqual(plan.operations[0].skillName, 'navigation');
+  assert.strictEqual(plan.operations[0].params.mode, 'retrace_steps');
+});

@@ -208,7 +208,7 @@ function initBot() {
               return;
             }
             // Only engage if not currently running a high-priority task from a player command
-            const currentTask = botContext.taskManager && botContext.taskManager.currentTask;
+            const currentTask = botContext.taskManager?.activeTask || botContext.currentTask;
             const isHighPriorityTask = currentTask && (currentTask.priority >= 80) && currentTask.requestedBy !== 'system' && currentTask.requestedBy !== 'AmbientScheduler' && currentTask.requestedBy !== 'restored';
 
             if (isHighPriorityTask) return; // Yield to player commands

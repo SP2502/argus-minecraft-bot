@@ -4,6 +4,7 @@ const CommandResponse = require('./CommandResponse');
 const CommandAudit = require('../security/command-audit.model');
 const Macro = require('./macro.model');
 const eventBus = require('../../core/EventBus');
+const { registry: skillRegistry } = require('../../core/SkillRegistry');
 const Priorities = require('../../shared/config/priorities');
 
 /**
@@ -166,6 +167,10 @@ class UnifiedCommandGateway {
       return CommandResponse.denied(authResult.reason);
     }
 
+    if (plan.missing && plan.missing.length > 0) {
+      return CommandResponse.error(`Cannot execute: ${plan.missing.join('; ')}`);
+    }
+
     // 11. Confirmation Requirement Check for Dangerous Operations
     for (const op of plan.operations) {
       if (op.dangerous) {
@@ -200,6 +205,14 @@ class UnifiedCommandGateway {
    * @returns {Promise<CommandResponse>}
    */
   async enqueuePlan(request, plan, parseResult) {
+    const unsupportedOp = plan.operations.find((op) =>
+      !op.isControl && (op.skillName === 'inventory' || op.skillName === 'locations') &&
+      !Object.hasOwn(skillRegistry, op.skillName)
+    );
+    if (unsupportedOp) {
+      return CommandResponse.error(`Command '${unsupportedOp.intentName}' is not yet implemented. Type 'help' for available commands.`);
+    }
+
     const taskIds = [];
 
     for (const op of plan.operations) {
@@ -212,7 +225,8 @@ class UnifiedCommandGateway {
           normalizedText: parseResult.normalizedText,
           parseConfidence: parseResult.confidence,
           allowed: true,
-          status: 'success',
+          status: controlRes.ok ? 'success' : 'error',
+          error: controlRes.ok ? undefined : controlRes.message,
           operations: plan.operations
         });
         return controlRes;
@@ -479,6 +493,40 @@ class UnifiedCommandGateway {
         this.taskManager.resume();
         return CommandResponse.success('Task execution resumed.');
 
+      case 'queue': {
+        if (!this.taskManager) return CommandResponse.error('Task manager unavailable.');
+        const { activeTask, queue, isPaused } = this.taskManager.getQueueSnapshot();
+        const active = activeTask ? `Active: ${activeTask.skillName}` : 'No active task.';
+        const queued = queue.length > 0
+          ? `Queued (${queue.length}): ${queue.map((task) => task.skillName).join(', ')}`
+          : 'Queue is empty.';
+        return CommandResponse.info(`${active} | ${queued}${isPaused ? ' | Queue paused.' : ''}`);
+      }
+
+      case 'list_bases':
+      case 'list_farms':
+      case 'list_mines':
+      case 'list_waypoints': {
+        if (!this.ctx.locations) return CommandResponse.error('Location service unavailable.');
+        const plural = op.intentName.slice('list_'.length);
+        const type = plural.slice(0, -1);
+        const locations = await this.ctx.locations.listByType(type);
+        if (locations.length === 0) return CommandResponse.info(`No ${plural} registered.`);
+
+        const labels = locations.map(({ name, x, y, z }) => type === 'base'
+          ? `${name} (${Math.round(x)}, ${Math.round(y)}, ${Math.round(z)})`
+          : name);
+        return CommandResponse.info(`Registered ${plural}: ${labels.join(' | ')}`);
+      }
+
+      case 'quiet_mode_on':
+      case 'quiet_mode_off': {
+        if (!this.messageRouter) return CommandResponse.error('Message router unavailable.');
+        const enabled = op.intentName === 'quiet_mode_on';
+        this.messageRouter.setQuietMode(enabled);
+        return CommandResponse.success(`Quiet mode ${enabled ? 'enabled' : 'disabled'}.`);
+      }
+
       case 'stop_all':
         this.taskManager.cancelAll(request.senderId);
         if (this.ctx.nav) this.ctx.nav.stopFollowing();
@@ -568,7 +616,7 @@ class UnifiedCommandGateway {
         break;
     }
 
-    return CommandResponse.success(`Control operation '${op.intentName}' executed.`);
+    return CommandResponse.error(`Control operation '${op.intentName}' is not yet implemented.`);
   }
 
   /**
