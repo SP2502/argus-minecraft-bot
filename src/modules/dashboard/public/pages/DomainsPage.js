@@ -19,13 +19,8 @@ class DomainsPage {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
         
-        <div class="hero-page-header">
-          <h1>Domain Hub</h1>
-          <p>Real-time operational telemetry across all 11 autonomous Argus subsystems.</p>
-        </div>
-
         <!-- Filter Tabs Strip -->
         <div style="display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;" id="domainFilterTabs">
           <button type="button" class="btn btn-outline btn-sm active" data-sub="ALL">All Domains</button>

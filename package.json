@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js",
+    "start:headless": "node index.js --headless",
+    "start:dashboard": "node index.js --dashboard",
     "dashboard": "node scripts/start-dashboard.js",
+    "preview": "node scripts/start-dashboard.js",
+    "dev": "node index.js",
     "test": "node --test"
   },
   "keywords": [

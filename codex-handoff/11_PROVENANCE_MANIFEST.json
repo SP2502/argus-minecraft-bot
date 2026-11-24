@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0",
+  "generation_timestamp": "2026-11-23T21:39:00+05:30",
+  "purpose": "ARGUS Minecraft Bot — Codex Handoff Package Provenance Manifest",
+
+  "source_repository": {
+    "url": "https://github.com/SP2502/argus-minecraft-bot",
+    "commit_sha": "97f0ba6016b170eb48762b1651481f5051e1bbd1",
+    "branch": "main",
+    "commit_date": "2026-09-19",
+    "commit_message": "Fix website link formatting in README",
+    "remote_name": "origin",
+    "clone_path": "%USERPROFILE%\\Downloads\\Projects\\argus"
+  },
+
+  "environment": {
+    "node_version": "v22.18.0",
+    "npm_version": "10.9.3",
+    "os": "Windows",
+    "generation_agent": "Antigravity (Google DeepMind)",
+    "model": "Claude Sonnet 4.6 (Thinking)"
+  },
+
+  "input_documents": [
+    {
+      "name": "ARGUS MINECRAFT BOT - COMPLETE FEATURE COMPENDIUM",
+      "original_filename": "media_1795445477380_aaeb0f76.pdf",
+      "sha256": "000a397c76947bfa2c9648304279acfa9ce41f6244d47ad3f9dead321bee9d01",
+      "size_bytes": 1050401,
+      "pages": 27,
+      "parts": ["Part 0 (API/Dashboard)", "Part 1 (AI Brain)", "Part 2 (Access Control)", "Part 3 (Communication)", "Part 4 (NLP)", "Part 5 (Navigation)", "Part 6 (Mining)", "Part 7 (Farming)", "Part 8 (Building)", "Part 9 (Combat)", "Part 10 (Inventory/Crafting)", "Part 11 (Task Manager)"],
+      "preserved_at": "argus\\reference\\ARGUS_Original_Feature_Compendium.pdf",
+      "trust_level": "SPECIFICATION (not evidence of completed features)"
+    },
+    {
+      "name": "ARGUS Preliminary Source-Grounded Findings",
+      "original_filename": "ARGUS_Preliminary_Source_Findings.md",
+      "path": "C:\\Users\\kkpcs\\Downloads\\ARGUS_Preliminary_Source_Findings.md",
+      "trust_level": "OBSERVED_IN_SOURCE for F01-F09; INVESTIGATION_LEAD for F10",
+      "findings_count": 10
+    },
+    {
+      "name": "ARGUS Antigravity Master Prompt",
+      "original_filename": "ARGUS_Antigravity_Master_Prompt.md",
+      "path": "C:\\Users\\kkpcs\\Downloads\\ARGUS_Antigravity_Master_Prompt.md",
+      "trust_level": "INSTRUCTIONS"
+    }
+  ],
+
+  "generated_documents": [
+    {
+      "file": "codex-handoff\\00_READ_FIRST.md",
+      "purpose": "Orientation, trust hierarchy, starting paths",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\01_SYSTEM_ARCHITECTURE.md",
+      "purpose": "Component map, init sequence, state ownership, events",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\02_COMMAND_EXECUTION_TRACES.md",
+      "purpose": "8 end-to-end command traces from chat to Mineflayer",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\03_MODULE_AND_FILE_INDEX.md",
+      "purpose": "Full file index with exports and consumers",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\04_KNOWN_FINDINGS.md",
+      "purpose": "10 supplied findings with source evidence and investigation questions",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\05_FEATURE_REALITY_MATRIX.csv",
+      "purpose": "Machine-readable Part 0-11 requirement coverage table",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\05_FEATURE_REALITY_MATRIX.md",
+      "purpose": "Human-readable feature reality matrix",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\06_RUNTIME_BASELINE_AND_TESTS.md",
+      "purpose": "Test inventory, mock/live distinction, proposed acceptance checklist",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\07_REPAIR_ORDER_FOR_CODEX.md",
+      "purpose": "Phased dependency-aware repair plan for Codex",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\08_CODEX_FIRST_TASK.md",
+      "purpose": "Ready-to-paste narrowly scoped first Codex task",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\09_INTEGRATION_CONTRACTS.md",
+      "purpose": "Schemas, skill interface, state machine, lock names, interface mismatches",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\10_KNOWN_UNKNOWNS.md",
+      "purpose": "What cannot be determined without live execution",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\11_PROVENANCE_MANIFEST.json",
+      "purpose": "This file — full audit trail",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\12_CODEX_NAVIGATION_INDEX.md",
+      "purpose": "Quick lookup: to fix X open files A/B/C",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\mermaid\\README.md",
+      "purpose": "Mermaid diagram folder readme",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\ARGUS_Feature_Compendium_Reality_Checked_v2.md",
+      "purpose": "Updated feature compendium (Markdown source for PDF)",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\ARGUS_Feature_Compendium_Reality_Checked_v2.pdf",
+      "purpose": "Updated feature compendium PDF",
+      "status": "CREATED"
+    },
+    {
+      "file": "reference\\ARGUS_Original_Feature_Compendium.pdf",
+      "purpose": "Original PDF preserved unchanged",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\DELIVERY_CHECKLIST.md",
+      "purpose": "Delivery validation checklist",
+      "status": "CREATED"
+    },
+    {
+      "file": "codex-handoff\\ARGUS_CODEX_HANDOFF.zip",
+      "purpose": "ZIP package of all handoff files",
+      "status": "CREATED"
+    }
+  ],
+
+  "findings_summary": {
+    "total_findings": 10,
+    "classifications": {
+      "direct_source_mismatch": ["F01", "F02", "F03", "F04", "F05", "F08"],
+      "inferred_concurrency_risk": ["F06"],
+      "inferred_durability_risk": ["F07"],
+      "documentation_conflict": ["F09"],
+      "investigation_lead": ["F10"]
+    },
+    "p1_priority": ["F01", "F02", "F03", "F04", "F05", "F08"],
+    "p2_priority": ["F06", "F07", "F10"],
+    "p3_priority": ["F09"]
+  },
+
+  "constraints": {
+    "no_code_modified": true,
+    "no_credentials_included": true,
+    "no_speculative_root_causes": true,
+    "no_invented_test_results": true,
+    "original_pdf_preserved": true,
+    "node_modules_excluded_from_zip": true
+  }
+}

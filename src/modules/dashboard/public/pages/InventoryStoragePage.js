@@ -19,18 +19,13 @@ class InventoryStoragePage {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div class="inventory-page-container">
+      <div class="inventory-page-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 16px;">
         
-        <div class="hero-page-header" style="grid-column: 1 / -1;">
-          <h1>Storage & Loadout</h1>
-          <p>Real-time 36-slot Minecraft player inventory, durability analytics, and warehouse storage container index.</p>
-        </div>
-
         <!-- Left Pane: 36-Slot Loadout Grid -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
-              ${SvgIcons.get('inventory', { size: 18 })}
+        <div class="card" style="padding: 20px;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 class="card-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+              ${SvgIcons.get('inventory', { size: 16 })}
               <span>Bot Loadout Matrix</span>
             </h3>
             <span class="badge badge-cyan" id="invMatrixSlotCount">36 Slots</span>

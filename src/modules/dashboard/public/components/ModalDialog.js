@@ -38,6 +38,11 @@ class ModalDialog {
             </button>
           </div>
 
+          <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+            <span>Preview default: <code class="mono" style="color: var(--accent);">preview-password-2026</code></span>
+            <button type="button" id="authFillPreviewBtn" class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 10.5px;">Auto-fill</button>
+          </div>
+
           <div id="authErrorMessage" style="font-size: 12px; color: var(--status-danger); min-height: 16px;"></div>
 
           <button type="submit" class="btn btn-primary" style="width: 100%;">
@@ -52,8 +57,16 @@ class ModalDialog {
     const form = modal.querySelector('#authLoginForm');
     const input = modal.querySelector('#authPasswordInput');
     const eyeBtn = modal.querySelector('#authToggleEyeBtn');
+    const fillBtn = modal.querySelector('#authFillPreviewBtn');
     const errorEl = modal.querySelector('#authErrorMessage');
     const box = modal.querySelector('#authDialogBox');
+
+    if (fillBtn) {
+      fillBtn.addEventListener('click', () => {
+        input.value = 'preview-password-2026';
+        input.focus();
+      });
+    }
 
     eyeBtn.addEventListener('click', () => {
       const isPass = input.type === 'password';

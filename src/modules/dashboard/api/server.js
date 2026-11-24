@@ -11,15 +11,35 @@ const { createSessionToken, verifySessionToken, extractBearerToken, validateConf
  * Creates and starts Express HTTP and WebSocket API server.
  * @param {import('../core/BotContext')} ctx - BotContext instance
  * @param {number} [port] - Server port (defaults to process.env.PORT or 3000)
+ * @param {string} [host] - Server bind host (defaults to process.env.HOST or '0.0.0.0')
  * @returns {{ app: express.Application, server: http.Server, wss: import('ws').WebSocketServer }}
  */
-function startServer(ctx, port = process.env.PORT || 3000) {
+function startServer(ctx, port = process.env.PORT || 3000, host = process.env.HOST || '0.0.0.0') {
   validateConfig();
   const app = express();
   app.use(express.json());
 
   // Serve static assets from public/
   app.use(express.static(path.join(__dirname, '../public')));
+
+  // Preview mode helper: instant preview session generator
+  if (process.env.ARGUS_PREVIEW === 'true' || process.env.ARGUS_MODE === 'preview') {
+    app.get('/api/auth/preview-session', (req, res) => {
+      const user = process.env.OWNER_USERNAME || 'DashboardOwner';
+      const role = 'owner';
+      const sessionToken = createSessionToken(user, role);
+      const session = verifySessionToken(sessionToken);
+
+      return res.json({
+        ok: true,
+        preview: true,
+        token: sessionToken,
+        username: user,
+        role,
+        expiresAt: session ? session.expiresAt : Date.now() + 28800000
+      });
+    });
+  }
 
   // Dashboard authentication endpoint. All other API routes require its signed session.
   app.post('/api/auth/login', (req, res) => {
@@ -70,11 +90,21 @@ function startServer(ctx, port = process.env.PORT || 3000) {
   // 4. Command Audit History: GET /api/commands/history?limit=50
   app.get('/api/commands/history', async (req, res) => {
     try {
+      const mongoose = require('mongoose');
+      if (mongoose.connection.readyState !== 1) {
+        const history = (ctx && typeof ctx.getCommandHistory === 'function')
+          ? ctx.getCommandHistory()
+          : [];
+        return res.json({ ok: true, history });
+      }
       const limit = Math.min(100, parseInt(req.query.limit || '50', 10));
       const history = await CommandAudit.find({}).sort({ timestamp: -1 }).limit(limit);
       return res.json({ ok: true, history });
     } catch (err) {
-      return res.status(500).json({ ok: false, error: err.message });
+      const history = (ctx && typeof ctx.getCommandHistory === 'function')
+        ? ctx.getCommandHistory()
+        : [];
+      return res.json({ ok: true, history });
     }
   });
 
@@ -91,14 +121,14 @@ function startServer(ctx, port = process.env.PORT || 3000) {
       const nextPort = Number(port) + 1;
       console.warn(`[API Server] Port ${port} is already in use. Retrying on port ${nextPort}...`);
       port = nextPort;
-      server.listen(port);
+      server.listen(port, host);
     } else {
       console.error('[API Server] Server error:', err.message);
     }
   });
 
-  server.listen(port, () => {
-    console.log(`[API Server] Real-Time Dashboard & REST Gateway listening on port ${port}`);
+  server.listen(port, host, () => {
+    console.log(`[API Server] Real-Time Dashboard & REST Gateway listening on http://${host}:${port}`);
   });
 
   return { app, server, wss };

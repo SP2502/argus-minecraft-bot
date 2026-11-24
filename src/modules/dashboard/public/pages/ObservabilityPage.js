@@ -24,13 +24,8 @@ class ObservabilityPage {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
         
-        <div class="hero-page-header">
-          <h1>Observability & Audit</h1>
-          <p>Subsystem heartbeats, tick-rate stability sparklines, and real-time security event streaming.</p>
-        </div>
-
         <!-- Health & Sparkline Metrics Hero -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
           

@@ -21,15 +21,10 @@ class WorldRadarPage {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div class="radar-station-container">
+      <div class="radar-station-container" style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr); gap: 16px;">
         
-        <div class="hero-page-header" style="grid-column: 1 / -1;">
-          <h1>World Radar</h1>
-          <p>Pure vector spatial proximity scanner, player orientation compass, and 3D coordinate telemetry.</p>
-        </div>
-
         <!-- Left: Pure SVG Radar Canvas Viewport -->
-        <div class="radar-viewport-card">
+        <div class="card radar-viewport-card" style="padding: 16px;">
           <div id="worldRadarSvgContainer" style="width: 100%; display: flex; justify-content: center;"></div>
         </div>
 

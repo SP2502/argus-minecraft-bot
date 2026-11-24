@@ -38,16 +38,16 @@ class InventoryMatrix {
         </div>
 
         <!-- 36-Slot Loadout Grid Container -->
-        <div style="background: #040812; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+        <div style="background: #040812; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 6px; overflow-x: auto;">
           
           <!-- Main Inventory (Slots 0 - 26) -->
-          <div class="inv-matrix-grid" id="mainInventoryGrid"></div>
+          <div class="inv-matrix-grid" id="mainInventoryGrid" style="min-width: 440px;"></div>
 
           <!-- Hotbar Divider -->
-          <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.4), transparent); margin: 6px 0;"></div>
+          <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.4), transparent); margin: 6px 0; min-width: 440px;"></div>
 
           <!-- Hotbar (Slots 27 - 35) -->
-          <div class="inv-matrix-grid" id="hotbarInventoryGrid"></div>
+          <div class="inv-matrix-grid" id="hotbarInventoryGrid" style="min-width: 440px;"></div>
         </div>
 
         <!-- Capacity & Loadout Summary Footer -->

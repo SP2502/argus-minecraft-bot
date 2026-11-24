@@ -16,6 +16,7 @@ let bot = null;
 let botContext = null;
 let aiBrain = null;
 let apiServer = null;
+let headlessServer = null;
 let chatAdapter = null;
 let lastHealth = 20;
 let initialHealthReceived = false;
@@ -561,6 +562,36 @@ function scheduleReconnect(explicitDelayMs = null, isCustomReason = false) {
 }
 
 /**
+ * Resolves whether the application should run in Headless mode or Dashboard mode.
+ * @returns {'headless'|'dashboard'}
+ */
+function getRuntimeMode() {
+  const args = process.argv.slice(2);
+  if (args.includes('--headless') || args.some((a) => a.startsWith('--mode=headless'))) {
+    return 'headless';
+  }
+  if (args.includes('--dashboard') || args.some((a) => a.startsWith('--mode=dashboard'))) {
+    return 'dashboard';
+  }
+
+  const envMode = (process.env.ARGUS_MODE || '').toLowerCase().trim();
+  if (envMode === 'headless' || process.env.HEADLESS === 'true') {
+    return 'headless';
+  }
+  if (envMode === 'dashboard') {
+    return 'dashboard';
+  }
+
+  // Default mode (preserves Render compatibility):
+  // If valid dashboard credentials are provided, launch dashboard; otherwise run safely in headless mode.
+  const pw = process.env.DASHBOARD_PASSWORD || '';
+  const sec = process.env.DASHBOARD_SESSION_SECRET || '';
+  const hasValidCreds = pw.length >= 12 && sec.length >= 32;
+
+  return hasValidCreds ? 'dashboard' : 'headless';
+}
+
+/**
  * Initializes persistent data storage, database connection, Mineflayer bot instance, and core systems.
  */
 async function bootstrap() {
@@ -570,8 +601,10 @@ async function bootstrap() {
   const owner = (process.env.OWNER_USERNAME || '').trim() || '[NOT CONFIGURED]';
   const authMode = process.env.AUTH_MODE || 'offline';
   const apiPort = process.env.API_PORT || process.env.PORT || 3000;
+  const runtimeMode = getRuntimeMode();
 
   logger.diagnose('ARGUS AUTONOMOUS SYSTEM INITIALIZING', {
+    'Runtime Mode': runtimeMode.toUpperCase(),
     'Target Server': `${host}:${port}`,
     'Bot Username': username,
     'Owner Username': owner,
@@ -588,9 +621,36 @@ async function bootstrap() {
     const platformInfo = persistenceManager.getPlatformInfo();
     logger.info('STORAGE', `Persistent Storage Directory: ${persistenceManager.dataDir} (${platformInfo.platform})`);
 
-    // 2. Start API & WebSocket server
-    if (!apiServer) {
-      apiServer = startServer(ctxProxy, apiPort);
+    // 2. Start Dashboard server (dashboard mode) or minimal HTTP health-only listener (headless mode)
+    if (runtimeMode === 'dashboard') {
+      if (!apiServer) {
+        apiServer = startServer(ctxProxy, apiPort);
+        logger.info('DASHBOARD', `Real-time authenticated dashboard active on port ${apiPort}.`);
+      }
+    } else {
+      logger.info('HEADLESS', 'Headless mode active: Web dashboard, REST command API, and WebSockets disabled.');
+      // If PORT or API_PORT is configured (e.g. Render Web Service port check), serve a minimal health-only listener
+      const healthPort = process.env.PORT || process.env.API_PORT;
+      if (healthPort) {
+        const express = require('express');
+        const healthApp = express();
+        healthApp.get('/health', (req, res) => {
+          res.json({
+            status: 'ok',
+            mode: 'headless',
+            online: isConnected,
+            botUsername: username,
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString()
+          });
+        });
+        healthApp.get('/', (req, res) => {
+          res.type('text/plain').send('ARGUS Minecraft Bot is running in headless mode.');
+        });
+        headlessServer = healthApp.listen(healthPort, () => {
+          logger.info('HEADLESS', `Minimal HTTP health check listening on port ${healthPort} (Render port check satisfied).`);
+        });
+      }
     }
 
     // 3. Connect to MongoDB persistence store (or graceful local fallback)
@@ -645,6 +705,19 @@ async function shutdown(signal) {
   }
 
   await stateStore.disconnect();
+
+  if (headlessServer) {
+    try {
+      await new Promise((resolve) => {
+        headlessServer.close(() => {
+          console.log('[Shutdown] Headless health server closed.');
+          resolve();
+        });
+      });
+    } catch (headlessErr) {
+      console.warn('[Shutdown] Error closing headless server:', headlessErr.message);
+    }
+  }
 
   if (apiServer) {
     try {

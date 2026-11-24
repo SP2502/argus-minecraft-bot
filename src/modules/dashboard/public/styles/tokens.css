@@ -1,110 +1,118 @@
 /**
- * Argus Design Tokens
- * Copilot Labs Midnight Slate-Navy Theme
- * Deep matte charcoal/navy base (#0b0f19), elevated card surfaces (#131926),
- * 24px rounded card geometry, subtle borders, and pill buttons.
+ * ARGUS Design Tokens
+ * Restrained Dark Operations Theme
+ * Near-black canvas (#090d16), charcoal surfaces (#121824, #182030),
+ * high-contrast typography, single action accent (#38bdf8), and strict semantic status colors.
  */
 :root {
-  /* ========================================================================
-     Color Palette - Copilot Labs Midnight Navy & Matte Charcoal
-     ======================================================================== */
-  --bg-canvas: #0b0f19;
-  --bg-sidebar: #080c14;
-  --bg-surface: #131926;
-  --bg-elevated: #182133;
-  --bg-overlay: rgba(11, 15, 25, 0.88);
-  --bg-input: #0d1320;
+  /* Canvas & Charcoal Surfaces */
+  --bg-canvas: #090d16;
+  --bg-sidebar: #06090f;
+  --bg-surface: #121824;
+  --bg-elevated: #182030;
+  --bg-hover: #202b3f;
+  --bg-overlay: rgba(6, 9, 15, 0.88);
+  --bg-input: #0c121d;
 
-  /* Pill Buttons & Interactive Surfaces */
-  --pill-bg: #1e2638;
-  --pill-bg-hover: #2a3752;
-  --pill-border: rgba(255, 255, 255, 0.1);
+  /* Interactive Elements */
+  --pill-bg: #162032;
+  --pill-bg-hover: #223049;
+  --pill-border: rgba(255, 255, 255, 0.12);
 
-  /* Borders & Dividers */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-medium: rgba(255, 255, 255, 0.12);
-  --border-focus: #3b82f6;
+  /* Subtle High-Fidelity Borders */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.28);
+  --border-focus: #38bdf8;
 
-  /* Typography Colors */
-  --text-primary: #ffffff;
-  --text-secondary: #8e9cb5;
-  --text-muted: #5a6882;
-  --text-inverse: #0b0f19;
+  /* Typography Colors - High WCAG Contrast */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --text-inverse: #090d16;
 
-  /* Primary Brand - Copilot Electric Blue & Cyan Accents */
-  --blue-400: #3b82f6;
-  --blue-500: #2563eb;
-  --blue-bg: rgba(59, 130, 246, 0.14);
+  /* Single Action Accent - Refined Cyan/Sky */
+  --accent: #38bdf8;
+  --accent-hover: #0284c7;
+  --accent-bg: rgba(56, 189, 248, 0.12);
+  --accent-border: rgba(56, 189, 248, 0.35);
+  --accent-glow: 0 0 16px rgba(56, 189, 248, 0.25);
+
+  /* Backward Compatibility Aliases */
+  --blue-400: #38bdf8;
+  --blue-500: #0284c7;
+  --blue-bg: rgba(56, 189, 248, 0.12);
   --cyan-400: #38bdf8;
   --cyan-500: #0ea5e9;
   --cyan-bg: rgba(56, 189, 248, 0.12);
-  --cyan-glow: 0 0 16px rgba(56, 189, 248, 0.35);
+  --violet-400: #a78bfa;
+  --violet-bg: rgba(167, 139, 250, 0.12);
 
-  /* Secondary Brand - Violet Accent */
-  --violet-400: #818cf8;
-  --violet-500: #6366f1;
-  --violet-bg: rgba(99, 102, 241, 0.14);
-  --violet-glow: 0 0 16px rgba(99, 102, 241, 0.35);
+  /* Reserved Status Semantics (Only for real status) */
+  /* Neutral / Idle / Inactive */
+  --status-idle: #94a3b8;
+  --status-idle-bg: rgba(148, 163, 184, 0.12);
+  --status-idle-border: rgba(148, 163, 184, 0.25);
 
-  /* Operational Status Semantics */
-  /* 1. Neutral Slate: IDLE / INACTIVE (NEVER RED) */
-  --status-idle: #8e9cb5;
-  --status-idle-bg: rgba(142, 156, 181, 0.12);
-  --status-idle-border: rgba(142, 156, 181, 0.25);
-
-  /* 2. Success: HEALTHY / ACTIVE / OK / ONLINE */
+  /* Online / Healthy / Success / Completed */
   --status-success: #10b981;
   --status-success-bg: rgba(16, 185, 129, 0.12);
   --status-success-border: rgba(16, 185, 129, 0.3);
 
-  /* 3. Warning: DEGRADED / RETREAT / CAUTION */
+  /* Reconnecting / Warning / Hungry / Confirmation Required */
   --status-warning: #f59e0b;
   --status-warning-bg: rgba(245, 158, 11, 0.12);
-  --status-warning-border: rgba(245, 158, 11, 0.3);
+  --status-warning-border: rgba(245, 158, 11, 0.35);
 
-  /* 4. Danger: ERROR / CRITICAL / HAZARD / DESTRUCTIVE */
+  /* Offline / Disconnected / Error / Critical Hazard / Denied */
   --status-danger: #ef4444;
   --status-danger-bg: rgba(239, 68, 68, 0.14);
   --status-danger-border: rgba(239, 68, 68, 0.35);
 
-  /* 5. Running / Busy */
+  /* Running / Active Directive */
   --status-running: #38bdf8;
-  --status-running-bg: rgba(56, 189, 248, 0.12);
+  --status-running-bg: rgba(56, 189, 248, 0.14);
+  --status-running-border: rgba(56, 189, 248, 0.35);
 
-  /* ========================================================================
-     Typography Hierarchy
-     ======================================================================== */
+  /* Typography Scale */
   --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  /* Strict Type Scale */
-  --type-page-title: 28px;
-  --type-section-title: 17px;
-  --type-primary-metric: 28px;
+  --type-page-title: 24px;
+  --type-section-title: 16px;
+  --type-primary-metric: 26px;
   --type-body: 14px;
   --type-body-sm: 13px;
-  --type-metadata: 11.5px;
+  --type-metadata: 12px;
 
-  /* ========================================================================
-     Radius, Elevation & Effects - Signature 24px Rounded Curves
-     ======================================================================== */
+  /* Radii & Elevation */
   --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --radius-card: 24px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-card: 16px;
   --radius-pill: 9999px;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
-  --shadow-elevated: 0 20px 48px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.55);
 
-  --glass-blur: blur(16px);
+  --glass-blur: blur(12px);
 
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Motion */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

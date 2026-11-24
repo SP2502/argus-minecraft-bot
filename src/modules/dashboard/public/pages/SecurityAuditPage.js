@@ -21,13 +21,8 @@ class SecurityAuditPage {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
         
-        <div class="hero-page-header">
-          <h1>Security & Access Governance</h1>
-          <p>5-tier role-based access control matrix, command audit logs, and credential protection policies.</p>
-        </div>
-
         <!-- Sensitive Data Redaction Notice Banner -->
         <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: var(--radius-md); padding: 12px 18px; display: flex; align-items: center; gap: 12px; color: var(--violet-400);">
           ${SvgIcons.get('security', { size: 20 })}
