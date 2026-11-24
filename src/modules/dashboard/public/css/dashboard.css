@@ -4,11 +4,11 @@
  * Imports modular design tokens, layout, components, states, and page stylesheets.
  */
 
-@import url('/styles/tokens.css');
-@import url('/styles/layout.css');
-@import url('/styles/components.css');
-@import url('/styles/states.css');
-@import url('/styles/pages.css');
+@import url('/styles/tokens.css?v=2.0.0');
+@import url('/styles/layout.css?v=2.0.0');
+@import url('/styles/components.css?v=2.0.0');
+@import url('/styles/states.css?v=2.0.0');
+@import url('/styles/pages.css?v=2.0.0');
 
 /* Global Reset & Base Setup */
 *, *::before, *::after {
