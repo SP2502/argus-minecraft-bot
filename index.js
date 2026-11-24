@@ -2,6 +2,7 @@ require('dotenv').config();
 require('dotenv').config({ path: '.env.local', override: true });
 
 const authManager = require('./src/core/AuthManager');
+const enableMovementTickCompat = require('./src/core/movement-tick-compat');
 const persistenceManager = require('./src/shared/persistence/persistence-manager');
 const StateStore = require('./src/shared/persistence/state-store');
 const BotContext = require('./src/core/BotContext');
@@ -91,6 +92,9 @@ function initBot() {
     logger.network('MINEFLAYER', `Establishing connection to ${targetHost}:${targetPort} as '${currentBotName}' (${authMode})...`);
     serverAuthManager.resetDetectionState();
     bot = authManager.createBot();
+    if (process.env.MC_TICK_END_COMPAT === 'true') {
+      enableMovementTickCompat(bot);
+    }
     initialHealthReceived = false;
 
     if (bot && bot._client) {
