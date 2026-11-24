@@ -22,7 +22,8 @@ class SpellCorrector {
       'build', 'construct', 'erect', 'shelter', 'wall', 'floor', 'platform', 'stairs', 'staircase', 'cube', 'box', 'bricks', 'glass',
       'warehouse', 'storage', 'chests', 'chest', 'organize', 'restock', 'resupply', 'supplies', 'locate', 'audit', 'catalog',
       'miner', 'woodcutter', 'warrior', 'farmer', 'kit',
-      'ambient', 'sleep', 'wake', 'bed', 'nap'
+      'ambient', 'sleep', 'wake', 'bed', 'nap',
+      'list', 'bases', 'farms', 'mines', 'waypoints', 'off'
     ]);
   }
 

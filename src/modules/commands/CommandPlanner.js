@@ -302,6 +302,10 @@ class CommandPlanner {
       params.mode = 'stop_following';
     }
 
+    if (intentName === 'retrace_steps') {
+      params.mode = 'retrace_steps';
+    }
+
     // 4. Inventory Parameters
     if (intentName === 'store_item' || intentName === 'retrieve_item' || intentName === 'drop_item') {
       if (entities.item) params.item = entities.item;

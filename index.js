@@ -2,6 +2,7 @@ require('dotenv').config();
 require('dotenv').config({ path: '.env.local', override: true });
 
 const authManager = require('./src/core/AuthManager');
+const enableMovementTickCompat = require('./src/core/movement-tick-compat');
 const persistenceManager = require('./src/shared/persistence/persistence-manager');
 const StateStore = require('./src/shared/persistence/state-store');
 const BotContext = require('./src/core/BotContext');
@@ -92,6 +93,9 @@ function initBot() {
     logger.network('MINEFLAYER', `Establishing connection to ${targetHost}:${targetPort} as '${currentBotName}' (${authMode})...`);
     serverAuthManager.resetDetectionState();
     bot = authManager.createBot();
+    if (process.env.MC_TICK_END_COMPAT === 'true') {
+      enableMovementTickCompat(bot);
+    }
     initialHealthReceived = false;
 
     if (bot && bot._client) {
@@ -209,7 +213,7 @@ function initBot() {
               return;
             }
             // Only engage if not currently running a high-priority task from a player command
-            const currentTask = botContext.taskManager && botContext.taskManager.currentTask;
+            const currentTask = botContext.taskManager?.activeTask || botContext.currentTask;
             const isHighPriorityTask = currentTask && (currentTask.priority >= 80) && currentTask.requestedBy !== 'system' && currentTask.requestedBy !== 'AmbientScheduler' && currentTask.requestedBy !== 'restored';
 
             if (isHighPriorityTask) return; // Yield to player commands
