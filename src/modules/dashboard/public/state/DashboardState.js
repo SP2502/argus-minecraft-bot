@@ -11,15 +11,17 @@ class DashboardState {
       connection: {
         status: 'connecting', // 'online' | 'reconnecting' | 'offline'
         latencyMs: 0,
-        lastHeartbeat: Date.now(),
-        isStale: false,
+        lastUpdate: null,
+        isStale: true,
         reconnectAttempts: 0
       },
 
       // Minecraft Server Connection & Owner Configuration
       serverConfig: {
         online: false,
-        connectionState: 'disconnected', // 'connected' | 'connecting' | 'disconnected'
+        connectionState: 'checking',
+        presence: null,
+        presenceReceivedAt: null,
         server: { host: 'localhost', port: 25565 },
         owner: 'Kamlesh',
         botUsername: 'Argus',
@@ -172,6 +174,16 @@ class DashboardState {
     return this.state[key];
   }
 
+  getMinecraftIndicator(cfg = this.state.serverConfig) {
+    switch (cfg.connectionState) {
+      case 'connected': return { label: 'In world', style: 'online' };
+      case 'connecting': return { label: 'Joining world', style: 'connecting' };
+      case 'stale': return { label: 'Signal stale', style: 'connecting' };
+      case 'disconnected': return { label: 'Disconnected', style: 'offline' };
+      default: return { label: 'Checking', style: 'connecting' };
+    }
+  }
+
   markFresh() {
     this.state.connection.lastUpdate = Date.now();
     this.state.connection.isStale = false;
@@ -179,11 +191,16 @@ class DashboardState {
   }
 
   checkFreshness() {
-    const elapsed = Date.now() - this.state.connection.lastUpdate;
+    const updatedAt = this.state.connection.lastUpdate;
+    const elapsed = updatedAt === null ? Infinity : Date.now() - updatedAt;
     const isStaleNow = elapsed > 10000;
     if (this.state.connection.isStale !== isStaleNow) {
       this.state.connection.isStale = isStaleNow;
       this.notify('connection');
+    }
+    const cfg = this.state.serverConfig;
+    if (cfg.presenceReceivedAt !== null && cfg.connectionState !== 'stale' && Date.now() - cfg.presenceReceivedAt > 12000) {
+      this.setState('serverConfig', { online: false, connectionState: 'stale' });
     }
   }
 }

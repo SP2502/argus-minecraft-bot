@@ -56,15 +56,13 @@ function createStatusRouter(ctx) {
    * Helper to determine live Minecraft server connection state.
    */
   function getMinecraftConnectionState() {
-    if (!ctx || !ctx.bot) return { online: false, state: 'disconnected' };
-    const client = ctx.bot._client;
-    if (client && !client.ended && client.state === 'play') {
-      return { online: true, state: 'connected' };
+    if (ctx?.preview || ctx?.isPreview) {
+      const status = ctx.getStatus?.();
+      const reported = status?.connectionState || 'disconnected';
+      const state = reported === 'reconnecting' ? 'connecting' : reported;
+      return { online: state === 'connected', state, disconnectReason: status?.disconnectReason ?? null, preview: true };
     }
-    if (client && !client.ended) {
-      return { online: false, state: 'connecting' };
-    }
-    return { online: false, state: 'disconnected' };
+    return ctx?.getMinecraftPresence?.() ?? { online: false, state: 'disconnected' };
   }
 
   /**
@@ -85,6 +83,7 @@ function createStatusRouter(ctx) {
       ...baseStatus,
       online: conn.online,
       connectionState: conn.state,
+      minecraftPresence: conn,
       server: {
         host: process.env.MC_HOST || 'localhost',
         port: process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : 25565
@@ -337,6 +336,7 @@ function createStatusRouter(ctx) {
       ok: true,
       online: conn.online,
       connectionState: conn.state,
+      minecraftPresence: conn,
       server: {
         host: process.env.MC_HOST || 'localhost',
         port: process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : 25565

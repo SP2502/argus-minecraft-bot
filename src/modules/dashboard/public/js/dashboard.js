@@ -128,7 +128,8 @@ class DashboardController {
       try { this.ws.close(); } catch (e) {}
     }
     this.updateLockLabel(false);
-    window.dashboardState.setState('connection', { status: 'offline' });
+    window.dashboardState.setState('connection', { status: 'offline', isStale: true, lastUpdate: null });
+    window.dashboardState.setState('serverConfig', { online: false, connectionState: 'checking', presence: null, presenceReceivedAt: null });
     this.showAuthModal();
   }
 
@@ -144,6 +145,7 @@ class DashboardController {
    */
   async syncRealState() {
     if (!this.sessionToken) return;
+    const sessionToken = this.sessionToken;
 
     try {
       // 1. Status & Server Configuration
@@ -151,7 +153,23 @@ class DashboardController {
         window.apiClient.getStatus(),
         window.apiClient.getServerConfig()
       ]);
-      if (status) {
+      if (sessionToken !== this.sessionToken) return;
+      const config = serverConfig?.ok ? serverConfig : status;
+      const presence = status?.minecraftPresence ?? config?.minecraftPresence;
+      if (config?.server) {
+        window.dashboardState.setState('serverConfig', {
+          online: presence?.online === true,
+          connectionState: presence?.state ?? 'checking',
+          server: config.server,
+          owner: config.owner,
+          botUsername: config.botUsername || status?.username || 'Argus',
+          authMode: config.authMode ?? window.dashboardState.get('serverConfig').authMode,
+          disconnectReason: presence?.disconnectReason ?? null,
+          presence: presence ?? null,
+          presenceReceivedAt: presence ? Date.now() : null
+        });
+      }
+      if (status && presence?.online) {
         window.dashboardState.markFresh();
         window.dashboardState.setState('bot', {
           username: status.username || 'Argus',
@@ -164,24 +182,6 @@ class DashboardController {
             activeTask: { name: status.currentTask, progress: 50 }
           });
         }
-      }
-      if (serverConfig && serverConfig.ok) {
-        window.dashboardState.setState('serverConfig', {
-          online: serverConfig.online,
-          connectionState: serverConfig.connectionState,
-          server: serverConfig.server,
-          owner: serverConfig.owner,
-          botUsername: serverConfig.botUsername,
-          authMode: serverConfig.authMode
-        });
-      } else if (status && status.server) {
-        window.dashboardState.setState('serverConfig', {
-          online: status.online,
-          connectionState: status.connectionState,
-          server: status.server,
-          owner: status.owner,
-          botUsername: status.username || 'Argus'
-        });
       }
 
       // 2. Navigation
@@ -257,7 +257,7 @@ class DashboardController {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/?token=${encodeURIComponent(this.sessionToken)}`;
 
-    console.log(`[WebSocket] Connecting to ${wsUrl}...`);
+    console.log('[WebSocket] Connecting to dashboard stream...');
     try {
       this.ws = new WebSocket(wsUrl);
     } catch (err) {
