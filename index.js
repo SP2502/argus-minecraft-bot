@@ -3,6 +3,7 @@ require('dotenv').config({ path: '.env.local', override: true });
 
 const authManager = require('./src/core/AuthManager');
 const enableMovementTickCompat = require('./src/core/movement-tick-compat');
+const trackMinecraftPresence = require('./src/core/minecraft-presence');
 const persistenceManager = require('./src/shared/persistence/persistence-manager');
 const StateStore = require('./src/shared/persistence/state-store');
 const BotContext = require('./src/core/BotContext');
@@ -15,6 +16,8 @@ const logger = require('./src/shared/observability/logger');
 
 let bot = null;
 let botContext = null;
+let readMinecraftPresence = null;
+let lastMinecraftDisconnect = null;
 let aiBrain = null;
 let apiServer = null;
 let headlessServer = null;
@@ -44,7 +47,16 @@ const ctxProxy = new Proxy({}, {
         });
       };
     }
-    if (!botContext) return undefined;
+    if (prop === 'getMinecraftPresence') {
+      return () => {
+        const presence = readMinecraftPresence?.(process.env.OWNER_USERNAME) ?? {
+          online: false,
+          state: isConnecting || reconnectTimer ? 'connecting' : 'disconnected'
+        };
+        return { ...presence, disconnectReason: presence.online ? null : lastMinecraftDisconnect };
+      };
+    }
+    if (!botContext || botContext.bot !== bot) return undefined;
     const val = botContext[prop];
     if (typeof val === 'function') {
       return val.bind(botContext);
@@ -93,6 +105,7 @@ function initBot() {
     logger.network('MINEFLAYER', `Establishing connection to ${targetHost}:${targetPort} as '${currentBotName}' (${authMode})...`);
     serverAuthManager.resetDetectionState();
     bot = authManager.createBot();
+    readMinecraftPresence = trackMinecraftPresence(bot);
     if (process.env.MC_TICK_END_COMPAT === 'true') {
       enableMovementTickCompat(bot);
     }
@@ -163,6 +176,8 @@ function initBot() {
     });
 
     bot.once('spawn', () => {
+      lastMinecraftDisconnect = null;
+      const spawnedBot = bot;
       isConnecting = false;
       isConnected = true;
       if (reconnectTimer) {
@@ -188,7 +203,7 @@ function initBot() {
 
       // Delay AI Brain activation slightly to allow surrounding chunks to fully settle
       setTimeout(() => {
-        if (!bot || !bot.entity) return;
+        if (bot !== spawnedBot || !spawnedBot.entity) return;
         aiBrain = new AIBrain(botContext);
         aiBrain.start();
         const botName = bot.username || process.env.MC_USERNAME || 'Bot';
@@ -395,12 +410,16 @@ function initBot() {
     bot.on('kicked', (reason) => {
       const reasonStr = formatKickReason(reason);
       const lower = reasonStr.toLowerCase();
+      lastMinecraftDisconnect = reasonStr;
+      const presence = readMinecraftPresence?.();
 
       logger.diagnose('SERVER DISCONNECT / KICK DETECTED', {
         'Kick Reason': reasonStr,
         'Target Server': `${targetHost}:${targetPort}`,
         'Bot Username': (bot && bot.username) || currentBotName,
-        'Spawned In World': Boolean(bot && bot.entity),
+        'Spawned In World': Boolean(presence?.spawnedAt),
+        'Last Minecraft Packet': presence?.lastPacketAt ? new Date(presence.lastPacketAt).toISOString() : 'None',
+        'Keepalives Received': presence?.keepAlivePackets ?? 0,
         'Health': (bot && bot.health !== undefined) ? `${bot.health}/20` : 'N/A'
       }, 'warn');
 
@@ -439,6 +458,11 @@ function initBot() {
     });
 
     bot.on('error', (err) => {
+      lastMinecraftDisconnect = err.message;
+      const presence = readMinecraftPresence?.();
+      if (presence?.spawnedAt) {
+        logger.network('MINEFLAYER', `Minecraft session ended with ${presence.keepAlivePackets} keepalives received. Last server packet: ${new Date(presence.lastPacketAt).toISOString()}.`);
+      }
       logger.diagnoseError(err, {
         host: targetHost,
         port: targetPort,
@@ -455,13 +479,17 @@ function initBot() {
 
     bot.on('end', (reason) => {
       const reasonStr = formatKickReason(reason);
-      logger.warn('MINEFLAYER', `Connection ended. Reason: "${reasonStr}"`);
+      lastMinecraftDisconnect = reasonStr;
+      const presence = readMinecraftPresence?.();
+      const keepAliveSummary = presence?.spawnedAt ? ` Keepalives received: ${presence.keepAlivePackets}.` : '';
+      logger.warn('MINEFLAYER', `Connection ended. Reason: "${reasonStr}".${keepAliveSummary}`);
       eventBus.emit('bot:ended', reasonStr);
       cleanupBot();
       scheduleReconnect();
     });
 
   } catch (err) {
+    lastMinecraftDisconnect = err.message;
     logger.diagnoseError(err, {
       host: targetHost,
       port: targetPort,
@@ -499,6 +527,7 @@ function formatKickReason(reason) {
  * Cleans up existing bot sub-components before reconnecting.
  */
 function cleanupBot() {
+  readMinecraftPresence = null;
   isConnected = false;
   isConnecting = false;
   if (reconnectTimer) {

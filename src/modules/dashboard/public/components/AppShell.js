@@ -51,7 +51,7 @@ class AppShell {
             <!-- Minecraft Connection Status Pill -->
             <div class="connection-status-pill offline" id="headerMcStatusPill" title="Minecraft Server Connection Status">
               <span class="connection-dot offline" id="headerMcStatusDot"></span>
-              <span id="headerMcStatusText">OFFLINE</span>
+              <span id="headerMcStatusText">Checking</span>
             </div>
 
             <!-- Target Minecraft Server Selector -->
@@ -78,7 +78,7 @@ class AppShell {
 
             <div class="telemetry-freshness" id="telemetryFreshness">
               <span class="freshness-dot"></span>
-              <span id="freshnessText">Telemetry: Live</span>
+              <span id="freshnessText">Dashboard feed: Live</span>
             </div>
           </div>
 
@@ -406,10 +406,10 @@ class AppShell {
       if (freshnessText && freshnessWrap) {
         if (conn.isStale) {
           freshnessWrap.classList.add('stale');
-          freshnessText.textContent = 'Telemetry: Stale';
+          freshnessText.textContent = 'Dashboard feed: Stale';
         } else {
           freshnessWrap.classList.remove('stale');
-          freshnessText.textContent = 'Telemetry: Live';
+          freshnessText.textContent = 'Dashboard feed: Live';
         }
       }
     });
@@ -482,25 +482,23 @@ class AppShell {
       const sideDot = document.getElementById('sidebarStatusDot');
       const sideServer = document.getElementById('sidebarStatusServer');
 
-      const isOnline = Boolean(cfg.online);
+      const indicator = window.dashboardState.getMinecraftIndicator(cfg);
       const host = (cfg.server && cfg.server.host) || 'localhost';
       const port = (cfg.server && cfg.server.port) || 25565;
-      const owner = cfg.owner || 'Kamlesh';
-      const isConnecting = cfg.connectionState === 'connecting';
+      const owner = cfg.owner || 'Unknown';
 
       if (pill && dot && text) {
-        const stateClass = isOnline ? 'online' : (isConnecting ? 'connecting' : 'offline');
-        pill.className = `connection-status-pill ${stateClass}`;
-        dot.className = `connection-dot ${stateClass}`;
-        text.textContent = isOnline ? 'ONLINE' : (isConnecting ? 'CONNECTING' : 'OFFLINE');
+        pill.className = `connection-status-pill ${indicator.style}`;
+        dot.className = `connection-dot ${indicator.style}`;
+        text.textContent = indicator.label;
       }
 
       if (srvBtn) srvBtn.textContent = `${host}:${port}`;
       if (ownerEl) ownerEl.textContent = owner;
       if (avatarEl) avatarEl.textContent = (owner.charAt(0) || 'K').toUpperCase();
       if (sideOwnerEl) sideOwnerEl.textContent = owner;
-      if (sideDot) sideDot.className = `connection-dot ${isOnline ? 'online' : (isConnecting ? 'connecting' : 'offline')}`;
-      if (sideServer) sideServer.textContent = `${isOnline ? 'Connected' : 'Offline'} · ${host}:${port}`;
+      if (sideDot) sideDot.className = `connection-dot ${indicator.style}`;
+      if (sideServer) sideServer.textContent = `${indicator.label} · ${host}:${port}`;
     });
   }
 }

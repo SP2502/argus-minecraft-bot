@@ -57,10 +57,10 @@ class CommandDeckPage {
             <div class="overview-col" style="display: flex; flex-direction: column; gap: 4px;">
               <div style="font-size: 10.5px; text-transform: uppercase; font-weight: 700; color: var(--text-dim); letter-spacing: 0.05em;">ARGUS Web Service</div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="connection-dot online" id="overviewGatewayDot"></span>
-                <strong style="font-size: 14px; color: #fff;" id="overviewGatewayText">HEALTHY (UP)</strong>
+                <span class="connection-dot connecting" id="overviewGatewayDot"></span>
+                <strong style="font-size: 14px; color: #fff;" id="overviewGatewayText">Checking</strong>
               </div>
-              <div style="font-size: 11.5px; color: var(--text-muted);" id="overviewGatewayMeta">REST API & WS Active</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);" id="overviewGatewayMeta">Dashboard connection</div>
             </div>
 
             <!-- Column 2: Minecraft Server Bot Connection -->
@@ -68,9 +68,10 @@ class CommandDeckPage {
               <div style="font-size: 10.5px; text-transform: uppercase; font-weight: 700; color: var(--text-dim); letter-spacing: 0.05em;">Minecraft Bot Connection</div>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="connection-dot offline" id="overviewMcDot"></span>
-                <strong style="font-size: 14px; color: #fff;" id="overviewMcText">OFFLINE</strong>
+                <strong style="font-size: 14px; color: #fff;" id="overviewMcText" aria-live="polite">Checking</strong>
               </div>
-              <div style="font-size: 11.5px; color: var(--text-muted);" id="overviewMcMeta">localhost:25565</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);" id="overviewMcMeta">Waiting for Minecraft status</div>
+              <div id="overviewPlayerPresence" style="font-size: 11.5px; color: var(--text-muted);"></div>
               <div id="overviewDisconnectReason" style="display: none; font-size: 11px; color: var(--status-danger); margin-top: 2px;"></div>
             </div>
 
@@ -88,11 +89,11 @@ class CommandDeckPage {
             <div class="overview-col" style="display: flex; flex-direction: column; gap: 4px;">
               <div style="font-size: 10.5px; text-transform: uppercase; font-weight: 700; color: var(--text-dim); letter-spacing: 0.05em;">Vitals & Freshness</div>
               <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 600;">
-                <span id="overviewHpVal" style="color: var(--status-success);">❤️ 20.0</span>
-                <span id="overviewFoodVal" style="color: #f59e0b;">🍗 20</span>
-                <span id="overviewCoordsVal" class="mono" style="font-size: 11.5px; color: var(--accent);">X: 0 Y: 64 Z: 0</span>
+                <span id="overviewHpVal" style="color: var(--status-success);">❤️ —</span>
+                <span id="overviewFoodVal" style="color: #f59e0b;">🍗 —</span>
+                <span id="overviewCoordsVal" class="mono" style="font-size: 11.5px; color: var(--accent);">—</span>
               </div>
-              <div style="font-size: 11.5px; color: var(--text-muted);" id="overviewLastUpdate">Telemetry: Live</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);" id="overviewLastUpdate">Waiting for Minecraft telemetry</div>
             </div>
 
           </div>
@@ -603,7 +604,7 @@ class CommandDeckPage {
       if (bot.health !== undefined) {
         const hp = Math.max(0, Math.min(20, Number(bot.health)));
         if (hpNum) hpNum.textContent = hp.toFixed(1);
-        if (overviewHp) overviewHp.textContent = `❤️ ${hp.toFixed(1)}`;
+        if (overviewHp && window.dashboardState.get('serverConfig').online) overviewHp.textContent = `❤️ ${hp.toFixed(1)}`;
         if (hpBar) {
           const hpPercent = (hp / 20) * 100;
           hpBar.style.width = `${hpPercent}%`;
@@ -641,7 +642,7 @@ class CommandDeckPage {
       if (bot.food !== undefined) {
         const food = Math.max(0, Math.min(20, Number(bot.food)));
         if (foodNum) foodNum.textContent = food;
-        if (overviewFood) overviewFood.textContent = `🍗 ${food}`;
+        if (overviewFood && window.dashboardState.get('serverConfig').online) overviewFood.textContent = `🍗 ${food}`;
         if (foodBar) {
           foodBar.style.width = `${(food / 20) * 100}%`;
           if (food <= 6) {
@@ -677,7 +678,7 @@ class CommandDeckPage {
         const y = typeof bot.position.y === 'number' ? bot.position.y.toFixed(1) : '64.0';
         const z = typeof bot.position.z === 'number' ? bot.position.z.toFixed(1) : '0.0';
         if (coordsText) coordsText.textContent = `X: ${x} Y: ${y} Z: ${z}`;
-        if (overviewCoords) overviewCoords.textContent = `X: ${x} Y: ${y} Z: ${z}`;
+        if (overviewCoords && window.dashboardState.get('serverConfig').online) overviewCoords.textContent = `X: ${x} Y: ${y} Z: ${z}`;
       }
       if (dimBadge && bot.dimension) {
         dimBadge.textContent = bot.dimension.toUpperCase();
@@ -694,48 +695,64 @@ class CommandDeckPage {
       const mcMeta = this.container.querySelector('#overviewMcMeta');
       const disconnectEl = this.container.querySelector('#overviewDisconnectReason');
 
-      const isOnline = Boolean(cfg.online);
-      const isConnecting = cfg.connectionState === 'connecting';
-      const host = (cfg.server && cfg.server.host) || 'localhost';
-      const port = (cfg.server && cfg.server.port) || 25565;
+      const indicator = window.dashboardState.getMinecraftIndicator(cfg);
+      const playerEl = this.container.querySelector('#overviewPlayerPresence');
+      const freshness = this.container.querySelector('#overviewLastUpdate');
+      const host = cfg.server?.host;
+      const port = cfg.server?.port;
+      const presence = cfg.presence;
 
       if (mcDot && mcText) {
-        if (isOnline) {
-          mcDot.className = 'connection-dot online';
-          mcText.textContent = 'CONNECTED (SPAWNED)';
-          mcText.style.color = 'var(--status-success)';
-        } else if (isConnecting) {
-          mcDot.className = 'connection-dot connecting';
-          mcText.textContent = 'CONNECTING...';
-          mcText.style.color = 'var(--status-warning)';
-        } else {
-          mcDot.className = 'connection-dot offline';
-          mcText.textContent = 'DISCONNECTED';
-          mcText.style.color = 'var(--status-danger)';
+        mcDot.className = `connection-dot ${indicator.style}`;
+        mcText.textContent = indicator.label;
+      }
+      if (mcMeta) {
+        mcMeta.textContent = host && port ? `${host}:${port} · ${cfg.botUsername}` : 'Waiting for Minecraft status';
+      }
+      if (freshness) {
+        freshness.textContent = cfg.connectionState === 'stale' ? 'Minecraft telemetry is stale' :
+          cfg.online ? (presence?.preview ? 'Preview telemetry' : 'Receiving world data') : 'Waiting for Minecraft telemetry';
+      }
+      if (playerEl) {
+        playerEl.textContent = '';
+        if (cfg.online && !presence?.preview && presence?.playerCount != null) {
+          const count = presence.playerCount;
+          const roster = `${count} ${count === 1 ? 'player' : 'players'} in ARGUS’s tab list`;
+          let owner = '';
+          if (presence.ownerListed === false) {
+            owner = ` · ${cfg.owner} absent from tab list`;
+          } else if (presence.ownerListed === true) {
+            owner = presence.ownerDistance == null ? ` · ${cfg.owner} listed · distance unavailable` :
+              ` · ${cfg.owner} ${presence.ownerDistance} blocks away`;
+          }
+          playerEl.textContent = `${roster}${owner}${presence.botListed === false ? ' · ARGUS absent from tab list' : ''}`;
         }
       }
-
-      if (mcMeta) {
-        mcMeta.textContent = `${host}:${port} · ${cfg.authMode || 'offline'}`;
-      }
-
       if (disconnectEl) {
-        if (!isOnline && cfg.disconnectReason) {
-          disconnectEl.style.display = 'block';
-          disconnectEl.textContent = `Reason: ${cfg.disconnectReason}`;
-        } else {
-          disconnectEl.style.display = 'none';
+        const reason = cfg.connectionState === 'stale' ?
+          'No recent Minecraft signal. Last-known data may be out of date.' : cfg.disconnectReason;
+        disconnectEl.style.display = !cfg.online && reason ? 'block' : 'none';
+        disconnectEl.textContent = !cfg.online && reason ? reason : '';
+      }
+      if (!cfg.online) {
+        for (const [id, value] of [['overviewHpVal', '❤️ —'], ['overviewFoodVal', '🍗 —'], ['overviewCoordsVal', '—']]) {
+          const el = this.container.querySelector(`#${id}`);
+          if (el) el.textContent = value;
         }
       }
     });
 
     // Sync Freshness
     window.dashboardState.subscribe('connection', (conn) => {
-      const lastUpdateEl = this.container.querySelector('#overviewLastUpdate');
-      if (lastUpdateEl) {
-        lastUpdateEl.textContent = conn.isStale ? 'Telemetry: Stale' : 'Telemetry: Live';
-        lastUpdateEl.style.color = conn.isStale ? 'var(--status-warning)' : 'var(--text-muted)';
-      }
+      const dot = this.container.querySelector('#overviewGatewayDot');
+      const label = this.container.querySelector('#overviewGatewayText');
+      const detail = this.container.querySelector('#overviewGatewayMeta');
+      if (!dot || !label || !detail) return;
+      const receiving = !conn.isStale;
+      dot.className = `connection-dot ${receiving ? 'online' : 'connecting'}`;
+      label.textContent = receiving ? 'Reachable' : 'Waiting for data';
+      detail.textContent = conn.status === 'online' ? 'Dashboard stream connected' :
+        (receiving ? 'Dashboard responding via HTTP' : 'Dashboard stream unavailable');
     });
   }
 }
