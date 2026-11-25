@@ -4,6 +4,7 @@ require('dotenv').config({ path: '.env.local', override: true });
 const authManager = require('./src/core/AuthManager');
 const enableMovementTickCompat = require('./src/core/movement-tick-compat');
 const trackMinecraftPresence = require('./src/core/minecraft-presence');
+const createMinecraftDiagnostics = require('./src/core/minecraft-diagnostics');
 const persistenceManager = require('./src/shared/persistence/persistence-manager');
 const StateStore = require('./src/shared/persistence/state-store');
 const BotContext = require('./src/core/BotContext');
@@ -18,6 +19,8 @@ let bot = null;
 let botContext = null;
 let readMinecraftPresence = null;
 let lastMinecraftDisconnect = null;
+let connectionDeadline = null;
+const minecraftDiagnostics = createMinecraftDiagnostics();
 let aiBrain = null;
 let apiServer = null;
 let headlessServer = null;
@@ -47,13 +50,20 @@ const ctxProxy = new Proxy({}, {
         });
       };
     }
+    if (prop === 'retryMinecraftConnection') {
+      return () => {
+        if (isShuttingDown || isConnecting || isConnected || minecraftDiagnostics.snapshot().failure?.category === 'access') return false;
+        initBot();
+        return true;
+      };
+    }
     if (prop === 'getMinecraftPresence') {
       return () => {
         const presence = readMinecraftPresence?.(process.env.OWNER_USERNAME) ?? {
           online: false,
           state: isConnecting || reconnectTimer ? 'connecting' : 'disconnected'
         };
-        return { ...presence, disconnectReason: presence.online ? null : lastMinecraftDisconnect };
+        return { ...presence, disconnectReason: presence.online ? null : lastMinecraftDisconnect, diagnostics: minecraftDiagnostics.snapshot() };
       };
     }
     if (!botContext || botContext.bot !== bot) return undefined;
@@ -99,12 +109,25 @@ function initBot() {
   const targetHost = process.env.MC_HOST || 'localhost';
   const targetPort = process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : 25565;
   const currentBotName = process.env.MC_USERNAME || 'Argus';
-  const authMode = authManager.authMode;
+  const authMode = authManager.detectAuthMode();
+  minecraftDiagnostics.begin(process.env.MC_VERSION || process.env.MINECRAFT_VERSION || 'auto', authMode);
 
   try {
     logger.network('MINEFLAYER', `Establishing connection to ${targetHost}:${targetPort} as '${currentBotName}' (${authMode})...`);
     serverAuthManager.resetDetectionState();
     bot = authManager.createBot();
+    const connectingBot = bot;
+    if (authMode === 'offline') {
+      connectionDeadline = setTimeout(() => {
+        if (bot !== connectingBot) return;
+        const { phase } = minecraftDiagnostics.snapshot();
+        const error = new Error(`Minecraft ${phase} did not complete within 30 seconds.`);
+        error.code = 'ARGUS_STARTUP_TIMEOUT';
+        connectingBot.emit('error', error);
+      }, 30000);
+      connectionDeadline.unref();
+    }
+    bot._client.once('connect', () => minecraftDiagnostics.advance('login'));
     readMinecraftPresence = trackMinecraftPresence(bot);
     if (process.env.MC_TICK_END_COMPAT === 'true') {
       enableMovementTickCompat(bot);
@@ -160,6 +183,7 @@ function initBot() {
     });
 
     bot.on('login', () => {
+      minecraftDiagnostics.advance('spawn', bot.version);
       isConnecting = false;
       isConnected = true;
       if (reconnectTimer) {
@@ -176,6 +200,9 @@ function initBot() {
     });
 
     bot.once('spawn', () => {
+      clearTimeout(connectionDeadline);
+      connectionDeadline = null;
+      minecraftDiagnostics.advance('world', bot.version);
       lastMinecraftDisconnect = null;
       const spawnedBot = bot;
       isConnecting = false;
@@ -409,6 +436,7 @@ function initBot() {
 
     bot.on('kicked', (reason) => {
       const reasonStr = formatKickReason(reason);
+      minecraftDiagnostics.fail(reasonStr, 'KICKED');
       const lower = reasonStr.toLowerCase();
       lastMinecraftDisconnect = reasonStr;
       const presence = readMinecraftPresence?.();
@@ -458,6 +486,7 @@ function initBot() {
     });
 
     bot.on('error', (err) => {
+      minecraftDiagnostics.fail(err.message, err.code);
       lastMinecraftDisconnect = err.message;
       const presence = readMinecraftPresence?.();
       if (presence?.spawnedAt) {
@@ -479,6 +508,7 @@ function initBot() {
 
     bot.on('end', (reason) => {
       const reasonStr = formatKickReason(reason);
+      minecraftDiagnostics.fail(reasonStr, 'SOCKET_CLOSED');
       lastMinecraftDisconnect = reasonStr;
       const presence = readMinecraftPresence?.();
       const keepAliveSummary = presence?.spawnedAt ? ` Keepalives received: ${presence.keepAlivePackets}.` : '';
@@ -489,6 +519,7 @@ function initBot() {
     });
 
   } catch (err) {
+    minecraftDiagnostics.fail(err.message, err.code);
     lastMinecraftDisconnect = err.message;
     logger.diagnoseError(err, {
       host: targetHost,
@@ -496,6 +527,7 @@ function initBot() {
       username: currentBotName,
       authMode
     });
+    cleanupBot();
     scheduleReconnect();
   }
 }
@@ -527,6 +559,9 @@ function formatKickReason(reason) {
  * Cleans up existing bot sub-components before reconnecting.
  */
 function cleanupBot() {
+  clearTimeout(connectionDeadline);
+  connectionDeadline = null;
+  minecraftDiagnostics.clearRetry();
   readMinecraftPresence = null;
   isConnected = false;
   isConnecting = false;
@@ -588,6 +623,7 @@ function scheduleReconnect(explicitDelayMs = null, isCustomReason = false) {
   }
 
   logger.network('RECONNECT', `Scheduling reconnect (attempt #${reconnectAttempts}) in ${delayMs / 1000} seconds...`);
+  minecraftDiagnostics.scheduleRetry(delayMs);
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
     initBot();

@@ -40,6 +40,18 @@ class CommandDeckPage {
     this.container = container;
     this.render();
     this.attachEventListeners();
+    const retryButton = container.querySelector('#overviewRetryMinecraft');
+    retryButton?.addEventListener('click', async () => {
+      const feedback = container.querySelector('#overviewRetryFeedback');
+      retryButton.disabled = true;
+      feedback.textContent = 'Starting connection attempt…';
+      try {
+        const result = await window.apiClient.retryMinecraftConnection();
+        feedback.textContent = result.message;
+      } catch (error) {
+        feedback.textContent = error.message;
+      }
+    });
     this.subscribeToState();
   }
 
@@ -72,6 +84,14 @@ class CommandDeckPage {
               </div>
               <div style="font-size: 11.5px; color: var(--text-muted);" id="overviewMcMeta">Waiting for Minecraft status</div>
               <div id="overviewPlayerPresence" style="font-size: 11.5px; color: var(--text-muted);"></div>
+              <details id="overviewConnectionDetails" hidden>
+                <summary>Connection diagnostics</summary>
+                <div id="overviewConnectionStage"></div>
+                <div id="overviewConnectionVersion"></div>
+                <div id="overviewConnectionRetry"></div>
+                <button type="button" class="btn btn-ghost" id="overviewRetryMinecraft" disabled>Retry connection</button>
+                <div id="overviewRetryFeedback" role="status"></div>
+              </details>
               <div id="overviewDisconnectReason" style="display: none; font-size: 11px; color: var(--status-danger); margin-top: 2px;"></div>
             </div>
 
@@ -727,6 +747,29 @@ class CommandDeckPage {
           }
           playerEl.textContent = `${roster}${owner}${presence.botListed === false ? ' · ARGUS absent from tab list' : ''}`;
         }
+      }
+      const diagnostics = presence?.diagnostics;
+      const details = this.container.querySelector('#overviewConnectionDetails');
+      if (details) details.hidden = !diagnostics;
+      if (diagnostics) {
+        const stages = { idle: 'Waiting to start', transport: 'Opening TCP connection', login: 'Minecraft login', spawn: 'Waiting for world spawn', world: 'World session' };
+        const stage = this.container.querySelector('#overviewConnectionStage');
+        const version = this.container.querySelector('#overviewConnectionVersion');
+        const retry = this.container.querySelector('#overviewConnectionRetry');
+        const button = this.container.querySelector('#overviewRetryMinecraft');
+        const name = stages[diagnostics.phase] ?? 'Unknown';
+        if (stage) stage.textContent = diagnostics.failure ? `${name} · ${diagnostics.failure.label}` : name;
+        if (version) {
+          const effective = diagnostics.negotiatedVersion ? ` · Negotiated ${diagnostics.negotiatedVersion}` : '';
+          version.textContent = `Client ${diagnostics.requestedVersion ?? 'auto'}${effective} · ${diagnostics.authMode ?? 'unknown auth'}`;
+        }
+        if (retry) {
+          retry.textContent = diagnostics.nextRetryAt ?
+            `Retry scheduled for ${new Date(diagnostics.nextRetryAt).toLocaleTimeString()}` :
+            (diagnostics.startedAt ? `Attempt started at ${new Date(diagnostics.startedAt).toLocaleTimeString()}` : '');
+        }
+        if (button) button.disabled = cfg.online || cfg.connectionState === 'stale' ||
+          (!diagnostics.failure && diagnostics.phase !== 'idle') || diagnostics.failure?.category === 'access';
       }
       if (disconnectEl) {
         const reason = cfg.connectionState === 'stale' ?

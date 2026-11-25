@@ -57,6 +57,10 @@ class ApiClient {
     return this.get('/api/status');
   }
 
+  retryMinecraftConnection() {
+    return this.post('/api/minecraft/retry');
+  }
+
   getNavStatus() {
     return this.get('/api/nav-status');
   }
