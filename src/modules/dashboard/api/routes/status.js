@@ -92,6 +92,17 @@ function createStatusRouter(ctx) {
     });
   });
 
+  // Retry the configured Minecraft target through the existing lifecycle.
+  router.post('/minecraft/retry', (req, res) => {
+    if (!ctx?.retryMinecraftConnection || ctx.preview || ctx.isPreview) {
+      return res.status(409).json({ ok: false, message: 'Minecraft retry unavailable in this mode.' });
+    }
+    if (!ctx.retryMinecraftConnection()) {
+      return res.status(409).json({ ok: false, message: 'Retry unavailable while connecting, in world, or blocked by the server.' });
+    }
+    return res.status(202).json({ ok: true, message: 'Connection attempt started.' });
+  });
+
   /**
    * GET /nav-status - Navigation service telemetry (isFollowing, isStuck, currentGoal)
    */
